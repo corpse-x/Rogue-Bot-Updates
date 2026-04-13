@@ -1,0 +1,2462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RogueBot — Documentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<!-- Lucide icons CDN -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  :root {
+    --bg: #060608;
+    --surface: #0d0d10;
+    --surface2: #141418;
+    --surface3: #1b1b20;
+    --border: #222228;
+    --border2: #2c2c34;
+    --text: #eaeaf0;
+    --text-muted: #64647a;
+    --text-dim: #3c3c4a;
+    --accent: #ffffff;
+    --accent-soft: rgba(255,255,255,0.055);
+
+    /* neon palette */
+    --neon-cyan:   #00e5ff;
+    --neon-violet: #a855f7;
+    --neon-rose:   #f43f5e;
+    --neon-amber:  #f59e0b;
+    --neon-green:  #22c55e;
+    --neon-blue:   #3b82f6;
+
+    /* neon glows */
+    --glow-cyan:   0 0 12px rgba(0,229,255,0.45), 0 0 30px rgba(0,229,255,0.18);
+    --glow-violet: 0 0 12px rgba(168,85,247,0.45), 0 0 30px rgba(168,85,247,0.18);
+    --glow-rose:   0 0 12px rgba(244,63,94,0.45),  0 0 30px rgba(244,63,94,0.18);
+    --glow-amber:  0 0 12px rgba(245,158,11,0.45), 0 0 30px rgba(245,158,11,0.18);
+    --glow-green:  0 0 12px rgba(34,197,94,0.45),  0 0 30px rgba(34,197,94,0.18);
+    --glow-blue:   0 0 12px rgba(59,130,246,0.45), 0 0 30px rgba(59,130,246,0.18);
+
+    --tag-green:      rgba(34,197,94,0.1);
+    --tag-green-text: #4ade80;
+    --tag-red:        rgba(244,63,94,0.1);
+    --tag-red-text:   #fb7185;
+    --tag-blue:       rgba(59,130,246,0.1);
+    --tag-blue-text:  #60a5fa;
+    --tag-yellow:     rgba(245,158,11,0.1);
+    --tag-yellow-text:#fbbf24;
+
+    --nav-w: 272px;
+    --font-mono: 'Space Mono', monospace;
+    --font-sans: 'Syne', sans-serif;
+
+    /* grid */
+    --grid-line: rgba(255,255,255,0.045);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ── GRID ──────────────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+    animation: gridDrift 20s linear infinite;
+  }
+  @keyframes gridDrift {
+    0%   { transform: translate(0,0); }
+    100% { transform: translate(40px,40px); }
+  }
+
+  /* ── PARTICLE CANVAS ───────────────────────── */
+  #bg-canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.85;
+  }
+
+  /* ── LAYOUT ─────────────────────────────────── */
+  #app { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+
+  /* ═══════════════════════════════════════════
+     SIDEBAR — brick-slide animation
+  ═══════════════════════════════════════════ */
+  #sidebar {
+    width: var(--nav-w);
+    min-height: 100vh;
+    background: rgba(8,8,12,0.94);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-right: 1px solid var(--border);
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  #sidebar::-webkit-scrollbar { width: 3px; }
+  #sidebar::-webkit-scrollbar-track { background: transparent; }
+  #sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* ── sidebar logo ── */
+  .sidebar-logo {
+    padding: 28px 22px 20px;
+    border-bottom: 1px solid var(--border);
+    opacity: 0;
+    transform: translateX(-32px);
+    animation: brickIn 0.45s cubic-bezier(0.22,1,0.36,1) forwards;
+    animation-delay: 0.05s;
+  }
+  .sidebar-logo .logo-mark {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--neon-cyan);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    text-shadow: var(--glow-cyan);
+  }
+  .sidebar-logo h1 {
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .sidebar-logo .version-badge {
+    display: inline-block;
+    margin-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 2px 8px;
+    border: 1px solid var(--border2);
+    border-radius: 2px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+
+  /* ── nav sections ── */
+  .nav-section { padding: 14px 0 4px; }
+  .nav-section-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 0 22px 8px;
+    opacity: 0;
+    transform: translateX(-32px);
+    animation: brickIn 0.42s cubic-bezier(0.22,1,0.36,1) forwards;
+  }
+
+  /* brick-slide keyframe */
+  @keyframes brickIn {
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes brickOut {
+    from { opacity: 1; transform: translateX(0); }
+    to   { opacity: 0; transform: translateX(-28px); }
+  }
+
+  /* stagger delays for each nav item */
+  .nav-item-anim {
+    opacity: 0;
+    transform: translateX(-32px);
+    animation: brickIn 0.4s cubic-bezier(0.22,1,0.36,1) forwards;
+  }
+
+  /* ── nav link ── */
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 14px 8px 22px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    position: relative;
+    transition: color 0.22s ease, background 0.22s ease;
+    border-left: 2px solid transparent;
+  }
+
+  /* neon left bar on hover/active */
+  .nav-link::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 15%; bottom: 15%;
+    width: 2px;
+    background: var(--neon-cyan);
+    border-radius: 2px;
+    opacity: 0;
+    box-shadow: var(--glow-cyan);
+    transition: opacity 0.22s ease, height 0.22s ease;
+  }
+  .nav-link:hover::before { opacity: 0.7; }
+  .nav-link.active::before { opacity: 1; }
+
+  /* hover neon glow bg */
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(0,229,255,0.06) 0%, transparent 80%);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+  }
+  .nav-link:hover::after { opacity: 1; }
+  .nav-link.active::after { opacity: 0.8; }
+
+  .nav-link:hover {
+    color: var(--neon-cyan);
+    background: rgba(0,229,255,0.04);
+    text-shadow: 0 0 8px rgba(0,229,255,0.35);
+  }
+  .nav-link.active {
+    color: var(--neon-cyan);
+    background: rgba(0,229,255,0.05);
+    padding-left: 20px;
+    text-shadow: 0 0 10px rgba(0,229,255,0.4);
+  }
+
+  .nav-link svg {
+    width: 14px; height: 14px;
+    flex-shrink: 0;
+    stroke-width: 1.8;
+    transition: filter 0.22s ease;
+  }
+  .nav-link:hover svg,
+  .nav-link.active svg {
+    filter: drop-shadow(0 0 4px var(--neon-cyan));
+    stroke: var(--neon-cyan);
+  }
+
+  .nav-count {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    background: var(--surface3);
+    padding: 1px 6px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    transition: color 0.22s, border-color 0.22s;
+  }
+  .nav-link:hover .nav-count,
+  .nav-link.active .nav-count {
+    color: var(--neon-cyan);
+    border: 1px solid rgba(0,229,255,0.2);
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 16px 22px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+
+  /* ── MAIN ──────────────────────────────────── */
+  #main { margin-left: var(--nav-w); flex: 1; min-height: 100vh; }
+
+  .page { display: none; padding: 48px 56px 80px; max-width: 1100px; }
+  .page.active { display: block; animation: pageFadeIn 0.35s ease; }
+  @keyframes pageFadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── PAGE HEADER ───────────────────────────── */
+  .page-header {
+    margin-bottom: 48px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  .page-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--neon-cyan);
+    margin-bottom: 12px;
+    text-shadow: var(--glow-cyan);
+  }
+  .page-title {
+    font-size: 40px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  .page-subtitle {
+    font-size: 15px;
+    color: var(--text-muted);
+    max-width: 580px;
+    line-height: 1.7;
+  }
+
+  /* ── SECTION TITLE ─────────────────────────── */
+  .section-title {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--neon-violet);
+    text-shadow: var(--glow-violet);
+    margin-bottom: 16px;
+    margin-top: 40px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(168,85,247,0.35), transparent);
+  }
+
+  /* ── KEY TERM HIGHLIGHTS ───────────────────── */
+  .kterm          { color: var(--neon-cyan);   font-weight: 700; transition: text-shadow 0.2s; }
+  .kterm:hover    { text-shadow: var(--glow-cyan); }
+  .kterm-violet   { color: var(--neon-violet); font-weight: 700; transition: text-shadow 0.2s; }
+  .kterm-violet:hover { text-shadow: var(--glow-violet); }
+  .kterm-rose     { color: var(--neon-rose);   font-weight: 700; transition: text-shadow 0.2s; }
+  .kterm-rose:hover   { text-shadow: var(--glow-rose); }
+  .kterm-amber    { color: var(--neon-amber);  font-weight: 700; transition: text-shadow 0.2s; }
+  .kterm-amber:hover  { text-shadow: var(--glow-amber); }
+  .kterm-green    { color: var(--neon-green);  font-weight: 700; transition: text-shadow 0.2s; }
+  .kterm-green:hover  { text-shadow: var(--glow-green); }
+
+  /* inline code with neon tint */
+  code {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    background: rgba(0,229,255,0.07);
+    border: 1px solid rgba(0,229,255,0.14);
+    padding: 1px 7px;
+    border-radius: 3px;
+    color: var(--neon-cyan);
+    transition: box-shadow 0.2s;
+  }
+  code:hover { box-shadow: var(--glow-cyan); }
+
+  /* ── STAT CARDS ────────────────────────────── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 40px;
+  }
+  .stat-card {
+    background: var(--surface);
+    padding: 22px 20px;
+    transition: background 0.25s ease, box-shadow 0.25s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-violet));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .stat-card:hover { background: var(--surface2); box-shadow: inset 0 0 30px rgba(0,229,255,0.04); }
+  .stat-card:hover::after { opacity: 1; }
+  .stat-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .stat-value {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    color: var(--accent);
+    line-height: 1;
+    transition: color 0.25s, text-shadow 0.25s;
+  }
+  .stat-card:hover .stat-value {
+    color: var(--neon-cyan);
+    text-shadow: var(--glow-cyan);
+  }
+  .stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  /* ── INFO BLOCK ────────────────────────────── */
+  .info-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 22px 26px;
+    margin-bottom: 14px;
+    transition: border-color 0.28s ease, box-shadow 0.28s ease, background 0.28s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .info-block::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--neon-cyan), var(--neon-violet));
+    opacity: 0;
+    transition: opacity 0.28s;
+  }
+  .info-block:hover {
+    border-color: rgba(0,229,255,0.22);
+    background: var(--surface2);
+    box-shadow: 0 0 20px rgba(0,229,255,0.06), inset 0 0 40px rgba(0,229,255,0.025);
+  }
+  .info-block:hover::before { opacity: 1; }
+  .info-block h3 {
+    font-size: 15px; font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 8px;
+    color: var(--accent);
+    transition: color 0.22s, text-shadow 0.22s;
+  }
+  .info-block:hover h3 { color: var(--neon-cyan); text-shadow: 0 0 10px rgba(0,229,255,0.3); }
+  .info-block p { font-size: 13px; color: var(--text-muted); line-height: 1.75; }
+
+  /* ── TAGS ──────────────────────────────────── */
+  .tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+    font-weight: 400;
+    transition: box-shadow 0.2s;
+  }
+  .tag-green  { background: var(--tag-green);  color: var(--tag-green-text);  border: 1px solid rgba(34,197,94,0.2); }
+  .tag-red    { background: var(--tag-red);    color: var(--tag-red-text);    border: 1px solid rgba(244,63,94,0.2); }
+  .tag-blue   { background: var(--tag-blue);   color: var(--tag-blue-text);   border: 1px solid rgba(59,130,246,0.2); }
+  .tag-yellow { background: var(--tag-yellow); color: var(--tag-yellow-text); border: 1px solid rgba(245,158,11,0.2); }
+  .tag-gray   { background: var(--surface3);   color: var(--text-muted); }
+  .tag-green:hover  { box-shadow: 0 0 8px rgba(34,197,94,0.4); }
+  .tag-red:hover    { box-shadow: 0 0 8px rgba(244,63,94,0.4); }
+  .tag-blue:hover   { box-shadow: 0 0 8px rgba(59,130,246,0.4); }
+  .tag-yellow:hover { box-shadow: 0 0 8px rgba(245,158,11,0.4); }
+
+  /* ── COMMAND CARDS ─────────────────────────── */
+  .cmd-list { display: flex; flex-direction: column; gap: 3px; }
+  .cmd-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+  }
+  .cmd-card:hover {
+    border-color: rgba(0,229,255,0.2);
+    background: var(--surface2);
+    box-shadow: 0 0 16px rgba(0,229,255,0.06);
+  }
+  .cmd-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .cmd-name {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--neon-cyan);
+    letter-spacing: 0.02em;
+    min-width: 160px;
+    text-shadow: 0 0 6px rgba(0,229,255,0.25);
+  }
+  .cmd-short { font-size: 12px; color: var(--text-muted); flex: 1; }
+  .cmd-tags { display: flex; gap: 6px; margin-left: auto; }
+  .cmd-body {
+    display: none;
+    padding: 0 20px 16px;
+    border-top: 1px solid var(--border);
+  }
+  .cmd-body.open { display: block; animation: expandIn 0.2s ease; }
+  @keyframes expandIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .cmd-body p { font-size: 13px; color: var(--text-muted); line-height: 1.75; padding-top: 14px; }
+  .cmd-syntax {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    background: rgba(0,229,255,0.05);
+    border: 1px solid rgba(0,229,255,0.12);
+    border-radius: 4px;
+    padding: 8px 14px;
+    margin-top: 10px;
+    color: var(--neon-cyan);
+    letter-spacing: 0.03em;
+  }
+
+  /* ── FILE TREE ─────────────────────────────── */
+  .tree-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .tree-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .tree-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .tree-dot:nth-child(1) { background: var(--neon-rose); box-shadow: 0 0 6px rgba(244,63,94,0.5); }
+  .tree-dot:nth-child(2) { background: var(--neon-amber); box-shadow: 0 0 6px rgba(245,158,11,0.5); }
+  .tree-dot:nth-child(3) { background: var(--neon-green); box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+  .tree-title-bar { font-family: var(--font-mono); font-size: 11px; color: var(--text-dim); margin-left: 8px; }
+  .tree-body { padding: 12px 8px; font-family: var(--font-mono); font-size: 12px; }
+  .tree-item {
+    display: flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.18s, box-shadow 0.18s;
+    position: relative;
+  }
+  .tree-item:hover {
+    background: rgba(0,229,255,0.06);
+    box-shadow: inset 0 0 20px rgba(0,229,255,0.03);
+  }
+  .tree-item:hover .tree-tooltip { opacity: 1; pointer-events: auto; }
+  .tree-indent { display: inline-block; width: 20px; flex-shrink: 0; color: var(--border2); font-size: 10px; }
+  .tree-icon { width: 18px; flex-shrink: 0; color: var(--text-dim); }
+  .tree-name { color: var(--text-muted); transition: color 0.18s; }
+  .tree-item:hover .tree-name { color: var(--neon-cyan); }
+  .tree-name.folder { color: var(--text); font-weight: 700; }
+  .tree-count { margin-left: auto; color: var(--text-dim); font-size: 10px; }
+  .tree-tooltip {
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--surface3);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--text-muted);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s;
+    z-index: 200;
+    max-width: 320px;
+    white-space: normal;
+    min-width: 200px;
+  }
+  .tree-tooltip .tt-title { color: var(--neon-cyan); font-weight: 700; margin-bottom: 4px; font-size: 12px; }
+
+  /* ── ITEM GRID ─────────────────────────────── */
+  .item-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .item-card {
+    background: var(--surface);
+    padding: 16px 18px;
+    transition: background 0.22s, box-shadow 0.22s;
+    cursor: default;
+    position: relative;
+    overflow: hidden;
+  }
+  .item-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 0%, rgba(168,85,247,0.08), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .item-card:hover { background: var(--surface2); box-shadow: inset 0 0 30px rgba(168,85,247,0.04); }
+  .item-card:hover::after { opacity: 1; }
+  .item-card-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; letter-spacing: -0.01em; transition: color 0.2s; }
+  .item-card:hover .item-card-name { color: var(--neon-violet); }
+  .item-card-desc { font-size: 11px; color: var(--text-muted); line-height: 1.5; margin-bottom: 8px; }
+  .item-card-footer { display: flex; align-items: center; justify-content: space-between; }
+  .item-price { font-family: var(--font-mono); font-size: 10px; color: var(--neon-amber); }
+
+  /* ── MONSTER TABLE ─────────────────────────── */
+  .monster-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .monster-table thead tr { background: var(--surface2); border-bottom: 1px solid var(--border); }
+  .monster-table th {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 10px 16px;
+    text-align: left;
+    font-weight: 400;
+  }
+  .monster-table td { padding: 10px 16px; border-bottom: 1px solid var(--border); color: var(--text-muted); }
+  .monster-table tbody tr { background: var(--surface); transition: background 0.18s, box-shadow 0.18s; }
+  .monster-table tbody tr:hover { background: var(--surface2); box-shadow: inset 3px 0 0 var(--neon-rose); }
+  .monster-table tbody tr:last-child td { border-bottom: none; }
+  .monster-table td.mon-name { color: var(--neon-rose); font-weight: 600; font-size: 13px; text-shadow: 0 0 6px rgba(244,63,94,0.25); }
+  .hp-bar { display: inline-flex; align-items: center; gap: 8px; width: 100%; }
+  .hp-track { flex: 1; height: 3px; background: var(--surface3); border-radius: 2px; overflow: hidden; max-width: 80px; }
+  .hp-fill { height: 100%; background: var(--neon-rose); border-radius: 2px; box-shadow: 0 0 6px rgba(244,63,94,0.5); }
+
+  /* ── ROOM GRID ─────────────────────────────── */
+  .room-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .room-card {
+    background: var(--surface);
+    padding: 14px 16px;
+    transition: background 0.22s, box-shadow 0.22s;
+  }
+  .room-card:hover {
+    background: var(--surface2);
+    box-shadow: inset 0 0 20px rgba(59,130,246,0.05);
+  }
+  .room-card-name { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 3px; transition: color 0.2s; }
+  .room-card:hover .room-card-name { color: var(--neon-blue); }
+  .room-card-code { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); }
+
+  /* ── BOSS CARDS ────────────────────────────── */
+  .boss-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .boss-card {
+    background: var(--surface);
+    padding: 20px;
+    transition: background 0.25s, box-shadow 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+  .boss-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon-rose), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .boss-card:hover { background: var(--surface2); box-shadow: 0 0 24px rgba(244,63,94,0.07); }
+  .boss-card:hover::before { opacity: 1; }
+  .boss-name { font-size: 14px; font-weight: 800; color: var(--neon-rose); letter-spacing: -0.02em; margin-bottom: 4px; text-shadow: 0 0 8px rgba(244,63,94,0.3); }
+  .boss-hp { font-family: var(--font-mono); font-size: 11px; color: var(--neon-rose); margin-bottom: 8px; opacity: 0.7; }
+  .boss-reward { font-size: 11px; color: var(--text-muted); }
+
+  /* ── ARCH GRID ─────────────────────────────── */
+  .arch-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .arch-card {
+    background: var(--surface);
+    padding: 22px 24px;
+    transition: background 0.25s, box-shadow 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+  .arch-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon-violet), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .arch-card:hover { background: var(--surface2); box-shadow: 0 0 20px rgba(168,85,247,0.06); }
+  .arch-card:hover::after { opacity: 1; }
+  .arch-card h4 { font-size: 13px; font-weight: 700; color: var(--neon-violet); margin-bottom: 6px; transition: text-shadow 0.2s; }
+  .arch-card:hover h4 { text-shadow: var(--glow-violet); }
+  .arch-card .arch-file { font-family: var(--font-mono); font-size: 10px; color: var(--text-dim); margin-bottom: 10px; }
+  .arch-card p { font-size: 12px; color: var(--text-muted); line-height: 1.75; }
+
+  /* ── FLOW STEPS ────────────────────────────── */
+  .flow-steps {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 20px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    transition: background 0.22s, box-shadow 0.22s;
+  }
+  .flow-step:last-child { border-bottom: none; }
+  .flow-step:hover {
+    background: var(--surface2);
+    box-shadow: inset 4px 0 0 var(--neon-cyan);
+  }
+  .flow-num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--neon-cyan);
+    background: rgba(0,229,255,0.08);
+    border: 1px solid rgba(0,229,255,0.18);
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+    text-shadow: 0 0 6px rgba(0,229,255,0.4);
+  }
+  .flow-content h4 { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; transition: color 0.2s; }
+  .flow-step:hover .flow-content h4 { color: var(--neon-cyan); }
+  .flow-content p { font-size: 12px; color: var(--text-muted); line-height: 1.65; }
+
+  /* ── CODE BLOCK ────────────────────────────── */
+  .code-block {
+    background: rgba(0,229,255,0.03);
+    border: 1px solid rgba(0,229,255,0.1);
+    border-radius: 6px;
+    padding: 16px 20px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--neon-cyan);
+    line-height: 1.75;
+    overflow-x: auto;
+    white-space: pre;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .code-block:hover { border-color: rgba(0,229,255,0.22); box-shadow: 0 0 20px rgba(0,229,255,0.06); }
+
+  /* ── SCROLLBAR ─────────────────────────────── */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,229,255,0.2); border-radius: 2px; }
+
+  /* ── DIVIDER ───────────────────────────────── */
+  .divider { height: 1px; background: var(--border); margin: 32px 0; }
+
+  /* ── GODS PAGE special ─────────────────────── */
+  .god-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px 22px;
+    margin-bottom: 10px;
+    transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+  .god-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .god-card.buddha::before { background: var(--neon-amber); box-shadow: var(--glow-amber); }
+  .god-card.jesus::before  { background: var(--neon-blue);  box-shadow: var(--glow-blue); }
+  .god-card.allah::before  { background: var(--neon-green); box-shadow: var(--glow-green); }
+  .god-card.emperor::before { background: var(--neon-violet); box-shadow: var(--glow-violet); }
+  .god-card.author::before { background: var(--neon-cyan); box-shadow: var(--glow-cyan); }
+  .god-card:hover { background: var(--surface2); }
+  .god-card.buddha:hover { border-color: rgba(245,158,11,0.25); box-shadow: 0 0 20px rgba(245,158,11,0.06); }
+  .god-card.jesus:hover  { border-color: rgba(59,130,246,0.25); box-shadow: 0 0 20px rgba(59,130,246,0.06); }
+  .god-card.allah:hover  { border-color: rgba(34,197,94,0.25);  box-shadow: 0 0 20px rgba(34,197,94,0.06); }
+  .god-card.emperor:hover { border-color: rgba(168,85,247,0.25); box-shadow: 0 0 20px rgba(168,85,247,0.06); }
+  .god-card.author:hover { border-color: rgba(0,229,255,0.25);  box-shadow: 0 0 20px rgba(0,229,255,0.06); }
+  .god-card:hover::before { opacity: 1; }
+  .god-name { font-size: 15px; font-weight: 700; margin-bottom: 5px; }
+  .god-card.buddha .god-name { color: var(--neon-amber); }
+  .god-card.jesus .god-name  { color: var(--neon-blue); }
+  .god-card.allah .god-name  { color: var(--neon-green); }
+  .god-card.emperor .god-name { color: var(--neon-violet); }
+  .god-card.author .god-name { color: var(--neon-cyan); }
+  .god-desc { font-size: 13px; color: var(--text-muted); line-height: 1.7; }
+
+  /* ── MOBILE TOGGLE ─────────────────────────── */
+  #mobile-toggle {
+    display: none;
+    position: fixed;
+    top: 14px; left: 14px;
+    z-index: 200;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    width: 36px; height: 36px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 4px;
+    transition: box-shadow 0.2s;
+  }
+  #mobile-toggle:hover { box-shadow: var(--glow-cyan); }
+  #mobile-toggle span { width: 18px; height: 1px; background: var(--text-muted); display: block; transition: 0.2s; }
+
+  @media (max-width: 900px) {
+    #sidebar { transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.22,1,0.36,1); }
+    #sidebar.open { transform: translateX(0); }
+    #main { margin-left: 0; }
+    .page { padding: 64px 24px 60px; }
+    #mobile-toggle { display: flex; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .arch-grid { grid-template-columns: 1fr; }
+    .page-title { font-size: 28px; }
+    .tree-tooltip { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<button id="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+  <span></span><span></span><span></span>
+</button>
+
+<canvas id="bg-canvas"></canvas>
+
+<div id="app">
+  <!-- ════════════════ SIDEBAR ════════════════ -->
+  <nav id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">Telegram Bot</div>
+      <h1>RogueBot</h1>
+      <span class="version-badge">py310 · master</span>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label nav-item-anim" style="animation-delay:0.12s">Overview</div>
+      <a class="nav-link active nav-item-anim" style="animation-delay:0.16s" onclick="showPage('overview')">
+        <i data-lucide="layout-dashboard"></i> Overview
+      </a>
+      <a class="nav-link nav-item-anim" style="animation-delay:0.20s" onclick="showPage('architecture')">
+        <i data-lucide="git-branch"></i> Architecture
+      </a>
+      <a class="nav-link nav-item-anim" style="animation-delay:0.24s" onclick="showPage('filetree')">
+        <i data-lucide="folder-tree"></i> File Structure
+      </a>
+      <a class="nav-link nav-item-anim" style="animation-delay:0.28s" onclick="showPage('updates')">
+        <i data-lucide="refresh-cw"></i> Updates
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label nav-item-anim" style="animation-delay:0.28s">Commands</div>
+      <a class="nav-link nav-item-anim" style="animation-delay:0.32s" onclick="showPage('commands')">
+        <i data-lucide="terminal"></i> All Commands
+        <span class="nav-count">18</span>
+      </a>
+      <a class="nav-link nav-item-anim" style="animation-delay:0.36s" onclick="showPage('cmd-player')">
+        <i data-lucide="user"></i> Player
+        <span class="nav-count">6</span>
+      </a>
+      <a class="nav-link nav-item-anim" style="animation-delay:0.40s" onclick="showPage('cmd-admin')">
+        <i data-lucide="shield"></i> Admin / Mod
+        <span class="nav-count">8</span>
+      </a>
+      <a class="nav-link nav-item-anim" style="animation-delay:0.44s" onclick="showPage('cmd-vote')">
+        <i data-lucide="vote"></i> Voting
+        <span class="nav-count">4</span>
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label nav-item-anim" style="animation-delay:0.48s">Game Systems</div>
+      <a class="nav-link nav-item-anim" style="animation-delay:0.52s" onclick="showPage('combat')">
+        <i data-lucide="swords"></i> Combat
+      </a>
+      <a class="nav-link nav-item-anim" style="animation-delay:0.56s" onclick="showPage('rooms')">
+        <i data-lucide="door-open"></i> Rooms
+        <span class="nav-count">60+</span>
+      </a>
+      <a class="nav-link nav-item-anim" style="animation-delay:0.60s" onclick="showPage('monsters')">
+        <i data-lucide="skull"></i> Monsters
+        <span class="nav-count">28</span>
+      </a>
+      <a class="nav-link nav-item-anim" style="animation-delay:0.64s" onclick="showPage('items')">
+        <i data-lucide="backpack"></i> Items
+        <span class="nav-count">70+</span>
+      </a>
+      <a class="nav-link nav-item-anim" style="animation-delay:0.68s" onclick="showPage('bosses')">
+        <i data-lucide="zap"></i> Bosses
+        <span class="nav-count">6</span>
+      </a>
+      <a class="nav-link nav-item-anim" style="animation-delay:0.72s" onclick="showPage('gods')">
+        <i data-lucide="sparkles"></i> Gods
+        <span class="nav-count">5</span>
+      </a>
+      <a class="nav-link nav-item-anim" style="animation-delay:0.76s" onclick="showPage('zones')">
+        <i data-lucide="map"></i> Zones
+        <span class="nav-count">2</span>
+      </a>
+    </div>
+
+    <div class="sidebar-footer">
+      RogueBot · Telegram RPG<br>
+      Python 3.10 · python-telegram-bot<br>
+      284 source files
+    </div>
+  </nav>
+
+  <!-- ════════════════ MAIN ════════════════ -->
+  <main id="main">
+
+    <!-- ══ PAGE: OVERVIEW ══ -->
+    <div class="page active" id="page-overview">
+      <div class="page-header">
+        <div class="page-eyebrow">Documentation · RogueBot</div>
+        <h2 class="page-title">Overview</h2>
+        <p class="page-subtitle">A text-based roguelike RPG Telegram bot built with Python 3.10 and python-telegram-bot. Players traverse procedurally selected dungeon rooms, fight monsters, collect items, pray to gods, and compete in leaderboards — all via Telegram chat buttons.</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Files</div>
+          <div class="stat-value">284</div>
+          <div class="stat-sub">Python source files</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Bot Commands</div>
+          <div class="stat-value">18</div>
+          <div class="stat-sub">Slash commands</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Items</div>
+          <div class="stat-value">70+</div>
+          <div class="stat-sub">Across 5 categories</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Rooms</div>
+          <div class="stat-value">60+</div>
+          <div class="stat-sub">Encounters & scenarios</div>
+        </div>
+      </div>
+
+      <div class="section-title">What It Is</div>
+
+      <div class="info-block">
+        <h3>Roguelike RPG via Telegram</h3>
+        <p>RogueBot is a fully-featured dungeon crawler game delivered entirely through a Telegram bot interface. Players interact by pressing reply-keyboard buttons — the bot generates story text, combat choices, item actions, and NPC dialogue as messages. There is no external UI; the game loop runs entirely in chat.</p>
+      </div>
+
+      <div class="info-block">
+        <h3>Dual Platform Support</h3>
+        <p>The project ships with two separate entry points: <code>main.py</code> for Telegram (via python-telegram-bot) and <code>main_vk.py</code> for VKontakte. There is also an <code>main_alice.py</code> for Yandex Alice integration. All share the same game engine and user/room/item code.</p>
+      </div>
+
+      <div class="info-block">
+        <h3>Persistent State via Pickle</h3>
+        <p>Each player's state (HP, MP, gold, inventory, current room, gods level, missions, buffs, pets, costume, variables) is serialized to a <code>.usr</code> file using Python pickle. A JSON flat-file database (<code>db.json</code> via TinyDB) stores global state: leaderboards, boss state, tournament data, and shared variables.</p>
+      </div>
+
+      <div class="info-block">
+        <h3>Game Loop Summary</h3>
+        <p>On <code>/start</code>, a new player character is created. The player enters the corridor and can open a door (random room), pray to a god, visit the shop, check inventory, or manage levels. Each room encounter resolves via text choices and dice rolls. Death records to the leaderboard; players can reborn. Bosses are shared global events updated by a background job.</p>
+      </div>
+
+      <div class="section-title">Tech Stack</div>
+
+      <div class="arch-grid">
+        <div class="arch-card">
+          <h4>python-telegram-bot</h4>
+          <div class="arch-file">main.py</div>
+          <p>Telegram integration layer. Uses <code>CommandHandler</code>, <code>MessageHandler</code>, and <code>Job</code> queues for background tasks (divine intervention every 3h, tournament updates every 10s).</p>
+        </div>
+        <div class="arch-card">
+          <h4>TinyDB (JSON)</h4>
+          <div class="arch-file">databasemanager/__init__.py</div>
+          <p>Flat-file JSON database for global state. Stores leaderboards, boss HP, tournament brackets, and shared variables. No external DB required.</p>
+        </div>
+        <div class="arch-card">
+          <h4>Pickle User State</h4>
+          <div class="arch-file">usermanager.py · user/</div>
+          <p>Each player serialised as a <code>User</code> object pickled to <code>users/&lt;uid&gt;.usr</code>. Supports VK users (prefixed <code>vk</code>) vs. Telegram users.</p>
+        </div>
+        <div class="arch-card">
+          <h4>Botan Analytics</h4>
+          <div class="arch-file">botan.py · statistics.py</div>
+          <p>Optional Botan.io integration for tracking user events and generating referral links via <code>/rate</code>. Gracefully skipped if token absent.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: UPDATES ══ -->
+    <div class="page" id="page-updates">
+      <div class="page-header">
+        <div class="page-eyebrow">Documentation · Project Updates</div>
+        <h2 class="page-title">Updates</h2>
+        <p class="page-subtitle">Latest engineering-level maintenance changes made to stabilize and modernize the bot runtime.</p>
+      </div>
+
+      <div class="section-title">Recent Changes</div>
+
+      <div class="info-block">
+        <h3>Core Codebase Was Reworked for Stability</h3>
+        <p>The project code was comprehensively reworked to remove legacy breakpoints and improve runtime compatibility. Critical flow paths were cleaned and updated so the bot can run reliably on modern Python runtime without startup failures.</p>
+      </div>
+
+      <div class="info-block">
+        <h3>Libraries Were Bumped to Current Versions</h3>
+        <p>Dependencies were upgraded to modern compatible versions used by this project, and integration points were updated accordingly. This includes Telegram bot library compatibility and modernized data-layer dependencies to reduce old package issues.</p>
+      </div>
+
+      <div class="info-block">
+        <h3>Production Readiness Outcome</h3>
+        <p>The result is a cleaner, deployment-ready codebase with updated package pins and improved operational consistency for hosted environments.</p>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: ARCHITECTURE ══ -->
+    <div class="page" id="page-architecture">
+      <div class="page-header">
+        <div class="page-eyebrow">Documentation · RogueBot</div>
+        <h2 class="page-title">Architecture</h2>
+        <p class="page-subtitle">How the modules fit together — from Telegram message receipt to game state change and reply dispatch.</p>
+      </div>
+
+      <div class="section-title">Request Flow</div>
+
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-num">01</div>
+          <div class="flow-content">
+            <h4>Telegram Message Received</h4>
+            <p><code>main.py</code> receives a message via <code>start_polling()</code>. A <code>reply()</code> closure is constructed that enqueues outgoing messages into a deque. This prevents Telegram 429 rate-limit errors via a 35ms dispatch job.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">02</div>
+          <div class="flow-content">
+            <h4>Command or Message Routing</h4>
+            <p>Slash commands (<code>/start</code>, <code>/leaderboard</code>, etc.) are routed via <code>CommandHandler</code>. All other text goes to <code>msg()</code> → <code>usermanager.message()</code> → <code>user.message()</code> state machine.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">03</div>
+          <div class="flow-content">
+            <h4>User State Machine</h4>
+            <p>The <code>User.message()</code> method dispatches based on <code>self.state</code>: <code>name</code>, <code>name_confirm</code>, <code>first_msg</code>, <code>corridor</code>, <code>pray</code>, <code>shop</code>, <code>inventory</code>, <code>room</code>, <code>dice</code>, <code>pet</code>, <code>reborned</code>, or <code>restart</code>. Each state calls a definition method imported from <code>user/</code> sub-modules.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">04</div>
+          <div class="flow-content">
+            <h4>Room Loading</h4>
+            <p><code>rooms/roomloader.py</code> dynamically imports the room Python module by name and level. Each room class has an <code>enter()</code> method and optionally <code>make_damage()</code>, <code>escape()</code>, <code>won()</code>, and item interaction hooks.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">05</div>
+          <div class="flow-content">
+            <h4>Item Loading</h4>
+            <p><code>items/itemloader.py</code> loads items from <code>items/good/</code>, <code>items/bad/</code>, <code>items/loot/</code>, <code>items/neutral/</code>, and <code>items/pets/</code>. Items define <code>on_use()</code>, <code>on_fight()</code>, <code>on_corridor()</code>, <code>on_shop()</code>, <code>get_damage_bonus()</code>, and stat fields.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">06</div>
+          <div class="flow-content">
+            <h4>State Persisted</h4>
+            <p>After every operation, <code>usermanager.save_user(usr)</code> pickles the modified User back to disk. Global state (boss, leaderboard) is written to TinyDB via <code>databasemanager</code>.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Module Map</div>
+
+      <div class="arch-grid">
+        <div class="arch-card">
+          <h4>main.py</h4>
+          <div class="arch-file">Entry point — Telegram</div>
+          <p>Registers all command handlers, starts two background jobs (divine intervention, tournament update), and manages the message queue to avoid 429 errors.</p>
+        </div>
+        <div class="arch-card">
+          <h4>usermanager.py</h4>
+          <div class="arch-file">Player persistence layer</div>
+          <p>CRUD for User pickle files. Provides <code>get_user</code>, <code>save_user</code>, <code>new_user</code>, <code>delete</code>, <code>random_user</code>, and helper wrappers called by main.py handlers.</p>
+        </div>
+        <div class="arch-card">
+          <h4>user/</h4>
+          <div class="arch-file">14 definition files</div>
+          <p>User class mixin-imports: corridor, death, fight, gods, inventory, items, levels, meet, missions, money, pets, room, save, shop, stats. Each file is imported directly into the <code>User</code> class body.</p>
+        </div>
+        <div class="arch-card">
+          <h4>rooms/roomloader.py</h4>
+          <div class="arch-file">Dynamic room importer</div>
+          <p>Resolves room by <code>(level, type, name)</code> → Python module path, imports it, and instantiates the room object. Supports <code>default</code> and <code>vietnam</code> zone packs.</p>
+        </div>
+        <div class="arch-card">
+          <h4>items/itemloader.py</h4>
+          <div class="arch-file">Item registry</div>
+          <p>Loads all item classes, builds the shop pool (4 random items per visit), and provides <code>load_item()</code> and <code>load_shop_items()</code>.</p>
+        </div>
+        <div class="arch-card">
+          <h4>databasemanager/</h4>
+          <div class="arch-file">TinyDB wrapper</div>
+          <p>Provides <code>get_variable</code>, <code>set_variable</code>, <code>get_leaderboard</code>, <code>add_to_list</code>, and leaderboard model for rooms and deaths.</p>
+        </div>
+        <div class="arch-card">
+          <h4>bossmanager.py</h4>
+          <div class="arch-file">Global boss state</div>
+          <p>Manages the shared world boss (one at a time). Boss respawns after 1 hour. Six possible bosses with varying HP pools (49k – 575k) and coin rewards.</p>
+        </div>
+        <div class="arch-card">
+          <h4>tornamentmanager.py</h4>
+          <div class="arch-file">PvP tournament engine</div>
+          <p>Players sign up via the Coliseum room. When 10+ players queue, a tournament starts. Every 10 seconds damage is exchanged round-robin until one player remains. Winner receives 10–20k gold.</p>
+        </div>
+      </div>
+
+      <div class="section-title">User State Values</div>
+      <div class="code-block">State         Description
+──────────────────────────────────────────
+name          Waiting for player to type their name
+name_confirm  Bot suggests a variant name; player confirms
+first_msg     Introduction narrative, first door prompt
+corridor      Between rooms; main action menu
+pray          Choosing a god to pray to
+shop          Browsing the Alchemist's Shop
+inventory     Viewing / managing item inventory
+room          Inside an active room encounter
+dice          Rolling dice (fight or room event)
+pet           Managing a pet companion
+reborned      Character died; showing death narrative
+restart *     Confirming character deletion</div>
+    </div>
+
+    <!-- ══ PAGE: FILE TREE ══ -->
+    <div class="page" id="page-filetree">
+      <div class="page-header">
+        <div class="page-eyebrow">Documentation · RogueBot</div>
+        <h2 class="page-title">File Structure</h2>
+        <p class="page-subtitle">284 source files across the project. Hover any file or folder for a description of its role.</p>
+      </div>
+
+      <div class="tree-container">
+        <div class="tree-toolbar">
+          <div class="tree-dot"></div>
+          <div class="tree-dot"></div>
+          <div class="tree-dot"></div>
+          <span class="tree-title-bar">RogueBot-master/</span>
+        </div>
+        <div class="tree-body" id="filetree-body"></div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: ALL COMMANDS ══ -->
+    <div class="page" id="page-commands">
+      <div class="page-header">
+        <div class="page-eyebrow">Documentation · Commands</div>
+        <h2 class="page-title">All Commands</h2>
+        <p class="page-subtitle">RogueBot registers 18 slash commands across three access levels: public, moderator, and admin.</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Commands</div>
+          <div class="stat-value">18</div>
+          <div class="stat-sub">Registered handlers</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Public</div>
+          <div class="stat-value">6</div>
+          <div class="stat-sub">Any player</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Moderator</div>
+          <div class="stat-value">6</div>
+          <div class="stat-sub">MODERS_IDS only</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Admin</div>
+          <div class="stat-value">6</div>
+          <div class="stat-sub">ADMINS_IDS only</div>
+        </div>
+      </div>
+
+      <div class="section-title">Public Commands</div>
+      <div class="cmd-list" id="cmd-all-public"></div>
+
+      <div class="section-title">Moderator Commands</div>
+      <div class="cmd-list" id="cmd-all-mod"></div>
+
+      <div class="section-title">Admin Commands</div>
+      <div class="cmd-list" id="cmd-all-admin"></div>
+
+      <div class="section-title">Voting Commands</div>
+      <div class="cmd-list" id="cmd-all-vote"></div>
+    </div>
+
+    <!-- ══ PAGE: PLAYER COMMANDS ══ -->
+    <div class="page" id="page-cmd-player">
+      <div class="page-header">
+        <div class="page-eyebrow">Commands · Player</div>
+        <h2 class="page-title">Player Commands</h2>
+        <p class="page-subtitle">Commands available to all players. No special permissions required.</p>
+      </div>
+      <div class="cmd-list" id="cmd-player-list"></div>
+    </div>
+
+    <!-- ══ PAGE: ADMIN COMMANDS ══ -->
+    <div class="page" id="page-cmd-admin">
+      <div class="page-header">
+        <div class="page-eyebrow">Commands · Admin / Mod</div>
+        <h2 class="page-title">Admin &amp; Mod Commands</h2>
+        <p class="page-subtitle">Privileged commands gated by <code>ADMINS_IDS</code> or <code>MODERS_IDS</code> environment variables.</p>
+      </div>
+      <div class="cmd-list" id="cmd-admin-list"></div>
+    </div>
+
+    <!-- ══ PAGE: VOTE COMMANDS ══ -->
+    <div class="page" id="page-cmd-vote">
+      <div class="page-header">
+        <div class="page-eyebrow">Commands · Voting</div>
+        <h2 class="page-title">Voting Commands</h2>
+        <p class="page-subtitle">A built-in yes/no voting system with persistent tracking. Each user can vote once per question.</p>
+      </div>
+      <div class="cmd-list" id="cmd-vote-list"></div>
+    </div>
+
+    <!-- ══ PAGE: COMBAT ══ -->
+    <div class="page" id="page-combat">
+      <div class="page-header">
+        <div class="page-eyebrow">Game Systems · Combat</div>
+        <h2 class="page-title">Combat System</h2>
+        <p class="page-subtitle">Turn-based combat using keyboard button choices and a dice roll system for bonus damage.</p>
+      </div>
+
+      <div class="section-title">Combat Actions</div>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-num">👊</div>
+          <div class="flow-content">
+            <h4>Hit with your hand</h4>
+            <p>Physical attack. Damage = <code>user.get_damage()</code> (base 10 + item bonuses + pet bonus) + <code>get_damage_bonus()</code> (dice roll / item procs). The most reliable option.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">🔮</div>
+          <div class="flow-content">
+            <h4>Conjure a blow</h4>
+            <p>Magic attack. Costs 5 MP. Damage = <code>get_mana_damage()</code> (base 0 + staff/amulet bonuses). Low damage early; scales with mage items. Fails if MP &lt; 5.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">✨</div>
+          <div class="flow-content">
+            <h4>Use: Imagination</h4>
+            <p>Triggers a dice roll. On a high roll, deals <code>dice_result + damage_bonus // 2</code> damage. Adds creative chaos — the dice result is between 1 and 32 (<code>DICE_MAX</code>).</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">➰</div>
+          <div class="flow-content">
+            <h4>Use: &lt;Item Name&gt;</h4>
+            <p>For any <code>fightable=True</code> item in inventory. Each item defines its own <code>get_damage_bonus(user, reply)</code> method with unique effects — the Scroll of a Thousand Lightnings does 1800+ dmg on wet enemies; the AK-47 grants flat bonus shots.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">🏃</div>
+          <div class="flow-content">
+            <h4>Escape</h4>
+            <p>Attempt to flee. Some rooms allow escape; others trap the player. Escape success may depend on charisma, items, or room-specific logic. The Scroll of Flash guarantees escape.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Stat Formulas</div>
+      <div class="code-block">damage_total    = base_damage(10) + Σ item.damage + pet.damage
+damage_bonus    = Σ calc_bonus(item.get_damage_bonus(), count) + Σ buff.damage_plus + pet.damage_bonus
+mana_damage     = Σ item.mana_damage + buff.mana_damage
+defence         = base_defence(1) + Σ item.defence + Σ buff.defence
+gold_bonus      = Π item.gold_bonus^count × Π buff.gold_bonus × pet.gold_bonus
+charisma        = base_charisma(0) + Σ item.charisma
+
+calc_bonus(b, cnt) = b × (1 + log(cnt) / 0.79)   # stacking logarithm</div>
+
+      <div class="section-title">Dice System</div>
+      <div class="info-block">
+        <h3>Dice Roll (1–32)</h3>
+        <p>A dice roll is requested by the game and the player must press the 🎲 Throw button. The result (1–32) modifies outcomes in combat, room events, and special encounters. Items like the Storyteller's Die grant bonus results. The result threshold <code>DICE_MIDDLE = 16</code> separates success/fail in many checks. <code>SMART_LEVEL = 10</code> and <code>DUMMY_LEVEL = -10</code> gate intelligence-based checks.</p>
+      </div>
+
+      <div class="section-title">Divine Intervention (Background Job)</div>
+      <div class="info-block">
+        <h3>Every 3 Hours — For All Players</h3>
+        <p>A background job fires every 3 hours for all active Telegram users. Gods may grant: full MP restore (Buddha), a wine item (Jesus), full HP restore (Allah), a special room preview (Author), or the Iron Halo buff (God-Emperor). This replaces the <code>prayed</code> flag and delivers blessings passively.</p>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: ROOMS ══ -->
+    <div class="page" id="page-rooms">
+      <div class="page-header">
+        <div class="page-eyebrow">Game Systems · Rooms</div>
+        <h2 class="page-title">Rooms</h2>
+        <p class="page-subtitle">60+ room modules across two zone packs (default, vietnam), three room types (usual, special, monster), and four difficulty tiers.</p>
+      </div>
+
+      <div class="section-title">Usual Rooms — Default Zone</div>
+      <div class="room-grid">
+        <div class="room-card"><div class="room-card-name">Apple Tree</div><div class="room-card-code">apple_tree.py</div></div>
+        <div class="room-card"><div class="room-card-name">Chest</div><div class="room-card-code">chest.py</div></div>
+        <div class="room-card"><div class="room-card-name">Clairvoyance</div><div class="room-card-code">clairvoyance.py</div></div>
+        <div class="room-card"><div class="room-card-name">Commissar</div><div class="room-card-code">comissar.py</div></div>
+        <div class="room-card"><div class="room-card-name">Destiny Book</div><div class="room-card-code">destiny_book.py</div></div>
+        <div class="room-card"><div class="room-card-name">The Devil</div><div class="room-card-code">devil.py</div></div>
+        <div class="room-card"><div class="room-card-name">Dog</div><div class="room-card-code">dog.py</div></div>
+        <div class="room-card"><div class="room-card-name">Door</div><div class="room-card-code">door.py</div></div>
+        <div class="room-card"><div class="room-card-name">Dumbledore's Office</div><div class="room-card-code">dumbledore_office.py</div></div>
+        <div class="room-card"><div class="room-card-name">Exit</div><div class="room-card-code">exit.py</div></div>
+        <div class="room-card"><div class="room-card-name">Fog Door</div><div class="room-card-code">fog_door.py</div></div>
+        <div class="room-card"><div class="room-card-name">Frog</div><div class="room-card-code">frog.py</div></div>
+        <div class="room-card"><div class="room-card-name">Gideon</div><div class="room-card-code">gideon.py</div></div>
+        <div class="room-card"><div class="room-card-name">Gnome</div><div class="room-card-code">gnome.py</div></div>
+        <div class="room-card"><div class="room-card-name">The Goal</div><div class="room-card-code">goal.py</div></div>
+        <div class="room-card"><div class="room-card-name">Haircutter</div><div class="room-card-code">haircutter.py</div></div>
+        <div class="room-card"><div class="room-card-name">Leprechaun</div><div class="room-card-code">lepricone.py</div></div>
+        <div class="room-card"><div class="room-card-name">Librarian</div><div class="room-card-code">librarian.py</div></div>
+        <div class="room-card"><div class="room-card-name">Lucifer's Bank</div><div class="room-card-code">lucifer_bank.py</div></div>
+        <div class="room-card"><div class="room-card-name">Luck</div><div class="room-card-code">luck.py</div></div>
+        <div class="room-card"><div class="room-card-name">Musclelot</div><div class="room-card-code">musclelot.py</div></div>
+        <div class="room-card"><div class="room-card-name">No Sudden Movement</div><div class="room-card-code">no_sudden_movement.py</div></div>
+        <div class="room-card"><div class="room-card-name">Nothing</div><div class="room-card-code">nothing.py</div></div>
+        <div class="room-card"><div class="room-card-name">Orc Shop</div><div class="room-card-code">orc_shop.py</div></div>
+        <div class="room-card"><div class="room-card-name">Rick &amp; Morty</div><div class="room-card-code">rick_and_morty.py</div></div>
+        <div class="room-card"><div class="room-card-name">River</div><div class="room-card-code">river.py</div></div>
+        <div class="room-card"><div class="room-card-name">Roulette</div><div class="room-card-code">roulette.py</div></div>
+        <div class="room-card"><div class="room-card-name">Sensei</div><div class="room-card-code">sensei.py</div></div>
+        <div class="room-card"><div class="room-card-name">Shaolin Monastery</div><div class="room-card-code">shaolin_monastery.py</div></div>
+        <div class="room-card"><div class="room-card-name">Slender</div><div class="room-card-code">slender.py</div></div>
+        <div class="room-card"><div class="room-card-name">Some Player</div><div class="room-card-code">some_player.py</div></div>
+        <div class="room-card"><div class="room-card-name">Spanish Girl</div><div class="room-card-code">spanish_girl.py</div></div>
+        <div class="room-card"><div class="room-card-name">Troll Bridge</div><div class="room-card-code">troll_bridge.py</div></div>
+        <div class="room-card"><div class="room-card-name">Uncle Stanley</div><div class="room-card-code">uncle_stanley.py</div></div>
+        <div class="room-card"><div class="room-card-name">Vegan</div><div class="room-card-code">vegan.py</div></div>
+        <div class="room-card"><div class="room-card-name">Vladislav</div><div class="room-card-code">vladislav.py</div></div>
+        <div class="room-card"><div class="room-card-name">Watches</div><div class="room-card-code">watches.py</div></div>
+        <div class="room-card"><div class="room-card-name">Water</div><div class="room-card-code">water.py</div></div>
+        <div class="room-card"><div class="room-card-name">Witcher</div><div class="room-card-code">witcher.py</div></div>
+        <div class="room-card"><div class="room-card-name">Caesar (Tournament)</div><div class="room-card-code">cesar.py</div></div>
+        <div class="room-card"><div class="room-card-name">Callback</div><div class="room-card-code">call_back.py</div></div>
+      </div>
+
+      <div class="section-title">Special Rooms</div>
+      <div class="room-grid">
+        <div class="room-card"><div class="room-card-name">Bill Cipher</div><div class="room-card-code">bill_cypher.py</div></div>
+        <div class="room-card"><div class="room-card-name">Bill Gates</div><div class="room-card-code">bill_gates.py</div></div>
+        <div class="room-card"><div class="room-card-name">Gabe Newell</div><div class="room-card-code">gabe.py</div></div>
+        <div class="room-card"><div class="room-card-name">Ice Cream Lake</div><div class="room-card-code">icecream.py</div></div>
+        <div class="room-card"><div class="room-card-name">Kiba</div><div class="room-card-code">kiba.py</div></div>
+        <div class="room-card"><div class="room-card-name">Hideo Kojima</div><div class="room-card-code">kodzima.py</div></div>
+        <div class="room-card"><div class="room-card-name">Leftovers</div><div class="room-card-code">remains.py</div></div>
+        <div class="room-card"><div class="room-card-name">Treasury (Rickrolled)</div><div class="room-card-code">rick_astley.py</div></div>
+        <div class="room-card"><div class="room-card-name">Crossroads (Sign)</div><div class="room-card-code">sign.py</div></div>
+        <div class="room-card"><div class="room-card-name">Catapult Room</div><div class="room-card-code">stone_room.py</div></div>
+        <div class="room-card"><div class="room-card-name">Something from Below</div><div class="room-card-code">the_thing_from_below.py</div></div>
+        <div class="room-card"><div class="room-card-name">Coliseum (Tournament)</div><div class="room-card-code">tornament.py</div></div>
+        <div class="room-card"><div class="room-card-name">Yegorf1</div><div class="room-card-code">yegorf1.py</div></div>
+        <div class="room-card"><div class="room-card-name">Halloween Shop</div><div class="room-card-code">helloween_shop.py</div></div>
+      </div>
+
+      <div class="section-title">Vietnam Zone — Missions</div>
+      <div class="room-grid">
+        <div class="room-card"><div class="room-card-name">Caravan (multi-part)</div><div class="room-card-code">missions/caravan/</div></div>
+        <div class="room-card"><div class="room-card-name">Leprechaun Quest</div><div class="room-card-code">missions/lepricone/</div></div>
+        <div class="room-card"><div class="room-card-name">Main Mission (3 parts)</div><div class="room-card-code">missions/main/</div></div>
+        <div class="room-card"><div class="room-card-name">Tips Tutorial</div><div class="room-card-code">missions/tips/</div></div>
+        <div class="room-card"><div class="room-card-name">Trap</div><div class="room-card-code">usual/trap.py</div></div>
+        <div class="room-card"><div class="room-card-name">River (Vietnam)</div><div class="room-card-code">usual/river.py</div></div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: MONSTERS ══ -->
+    <div class="page" id="page-monsters">
+      <div class="page-header">
+        <div class="page-eyebrow">Game Systems · Monsters</div>
+        <h2 class="page-title">Monsters</h2>
+        <p class="page-subtitle">28 monster types across 3 difficulty tiers plus Vietnam zone enemies. HP and damage ranges shown.</p>
+      </div>
+
+      <div class="section-title">Easy Tier</div>
+      <table class="monster-table">
+        <thead><tr><th>Name</th><th>HP</th><th>Damage Range</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="mon-name">Rat</td><td>20</td><td>2 – 4</td><td>Basic starter enemy</td></tr>
+          <tr><td class="mon-name">Slug (Slime)</td><td>30</td><td>0 – 3</td><td>Almost harmless; drops slime</td></tr>
+          <tr><td class="mon-name">Flying Rat (Bat)</td><td>15</td><td>5 – 7</td><td>Fast; drops bat wing</td></tr>
+          <tr><td class="mon-name">Grass</td><td>12</td><td>0 – 0</td><td>Does zero damage; comedic</td></tr>
+          <tr><td class="mon-name">Minion</td><td>23</td><td>1 – 4</td><td>Banana makes him confused</td></tr>
+          <tr><td class="mon-name">Duck (Fire)</td><td>10</td><td>5 – 7</td><td>Fire duck; bread interacts</td></tr>
+          <tr><td class="mon-name">Spirit</td><td>10</td><td>1 – 5</td><td>Disembodied; low threat</td></tr>
+          <tr><td class="mon-name">Zombie</td><td>20</td><td>0 – 2</td><td>Slow; minimal damage</td></tr>
+          <tr><td class="mon-name">Sylphide</td><td>25</td><td>7 – 14</td><td>Air element; moderate</td></tr>
+          <tr><td class="mon-name">Werewolf</td><td>35</td><td>15 – 23</td><td>Highest-damage easy mob</td></tr>
+          <tr><td class="mon-name">Archmage (past)</td><td>50</td><td>15 – 20</td><td>Magic-heavy; tough for tier</td></tr>
+          <tr><td class="mon-name">Unnatural Seven-Legged</td><td>50</td><td>15 – 30</td><td>Dragon Slayer does extra dmg</td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-title">Medium Tier</div>
+      <table class="monster-table">
+        <thead><tr><th>Name</th><th>HP</th><th>Damage Range</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="mon-name">Bear</td><td>70</td><td>15 – 30</td><td>Solid mid-tier fighter</td></tr>
+          <tr><td class="mon-name">Dipper</td><td>60</td><td>3 – 8</td><td>Gravity Falls reference; low dmg</td></tr>
+          <tr><td class="mon-name">Ghoul</td><td>10</td><td>15 – 35</td><td>Glass cannon; glass HP, nasty atk</td></tr>
+          <tr><td class="mon-name">Internet Troll</td><td>100</td><td>10 – 20</td><td>Tanky; charisma-based interactions</td></tr>
+          <tr><td class="mon-name">Knight</td><td>170</td><td>30 – 40</td><td>Drops helmet/sword/shield loot</td></tr>
+          <tr><td class="mon-name">Mimic (Box)</td><td>50</td><td>50 – 50</td><td>Always hits for exactly 50; surprise</td></tr>
+          <tr><td class="mon-name">Mirror</td><td>1</td><td>0 – 0</td><td>Special mechanic; reflects player</td></tr>
+          <tr><td class="mon-name">Nazgul</td><td>100</td><td>10 – 15</td><td>LotR enemy; steady damage</td></tr>
+          <tr><td class="mon-name">Promoter</td><td>100</td><td>15 – 17</td><td>Ad-man; charisma mechanics</td></tr>
+          <tr><td class="mon-name">Rabbit</td><td>250</td><td>1 – 3</td><td>Monty Python ref; huge HP, tiny atk</td></tr>
+          <tr><td class="mon-name">Mechano Turtle</td><td>200</td><td>10 – 12</td><td>Armored; high HP</td></tr>
+          <tr><td class="mon-name">Long-Haired Brunette</td><td>120</td><td>16 – 18</td><td>Chewbacca reference</td></tr>
+          <tr><td class="mon-name">Group of Bandits</td><td>400</td><td>30 – 60</td><td>High threat; multiple enemies</td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-title">Hard Tier</div>
+      <table class="monster-table">
+        <thead><tr><th>Name</th><th>HP</th><th>Damage Range</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="mon-name">Basilisk</td><td>135</td><td>16 – 25</td><td>Drops basilisk tooth</td></tr>
+          <tr><td class="mon-name">Dark Lord</td><td>1,000</td><td>20 – 25</td><td>"Must be a fierce guy" — source code</td></tr>
+          <tr><td class="mon-name">Jason Voorhees</td><td>100</td><td>15 – 30</td><td>Horror icon encounter</td></tr>
+          <tr><td class="mon-name">Orc</td><td>130</td><td>20 – 40</td><td>Standard hard-tier brawler</td></tr>
+          <tr><td class="mon-name">Vaper</td><td>80</td><td>10 – 20</td><td>Vape-themed; special interactions</td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-title">Vietnam Zone Enemies</div>
+      <table class="monster-table">
+        <thead><tr><th>Name</th><th>HP</th><th>Damage Range</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="mon-name">Bush (Soldier)</td><td>280</td><td>20 – 35</td><td>Guerrilla enemy; camouflaged</td></tr>
+          <tr><td class="mon-name">Hippie</td><td>200</td><td>40 – 50</td><td>Surprisingly dangerous</td></tr>
+          <tr><td class="mon-name">Vietnamese Army</td><td>1,500</td><td>40 – 70</td><td>Elite; highest base HP non-boss</td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-title">Special / Boss-Room Monsters</div>
+      <table class="monster-table">
+        <thead><tr><th>Name</th><th>Type</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td class="mon-name">Dragon</td><td><span class="tag tag-red">boss</span></td><td>Dragon Slayer does bonus damage</td></tr>
+          <tr><td class="mon-name">Doctor Who Monster</td><td><span class="tag tag-blue">special</span></td><td>Laser Screwdriver interaction</td></tr>
+          <tr><td class="mon-name">Twi Monster</td><td><span class="tag tag-blue">special</span></td><td>Uses twi_phrases taunts</td></tr>
+          <tr><td class="mon-name">Kids Monster</td><td><span class="tag tag-gray">misc</span></td><td>Beginner-level encounter</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ══ PAGE: ITEMS ══ -->
+    <div class="page" id="page-items">
+      <div class="page-header">
+        <div class="page-eyebrow">Game Systems · Items</div>
+        <h2 class="page-title">Items</h2>
+        <p class="page-subtitle">70+ items across 5 categories. Sold in the Alchemist's Shop (4 random items per visit) or found as room loot.</p>
+      </div>
+
+      <div class="section-title">Good Items — Beneficial Effects</div>
+      <div class="item-grid">
+        <div class="item-card">
+          <div class="item-card-name">HP Potion</div>
+          <div class="item-card-desc">A test tube with colored liquid. Restores health points.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 100g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">MP Potion</div>
+          <div class="item-card-desc">Colored potion. Restores mana points for magic attacks.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 100g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Boxing Gloves</div>
+          <div class="item-card-desc">Uncomfortable for a sword, but hit harder and don't hurt your hands!</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 200g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Scroll of Flash</div>
+          <div class="item-card-desc">Guarantees escape from any room. One-time use teleport out.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 9,990g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Save Scroll</div>
+          <div class="item-card-desc">Save me! Creates a checkpoint to return to on death.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 10,000g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Novice Mage's Staff</div>
+          <div class="item-card-desc">Increases your magic damage by +20 mana_damage. Fightable.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 100g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Scroll of a Thousand Lightnings</div>
+          <div class="item-card-desc">Deals massive lightning damage — even more on wet enemies (×3.5 mult).</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 200g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Water Scroll</div>
+          <div class="item-card-desc">Soaks the enemy (tag: wet), enabling lightning combos next turn.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 100g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Turtle Scroll (Armor)</div>
+          <div class="item-card-desc">Temporary defence buff. Wraps you in shell armor.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 100g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Super Scroll</div>
+          <div class="item-card-desc">Triples your current damage for one hit. Expensive burst.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 500g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Seal of Purity</div>
+          <div class="item-card-desc">Warhammer 40K litany parchment. +1 defence when worn.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 50g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Tin Foil Hat</div>
+          <div class="item-card-desc">Protects brain from radiation. +20 defence. Niche but powerful.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 2,000g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Half Death Potion</div>
+          <div class="item-card-desc">Fakes player death to escape encounters. Removes item on use.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 100g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Golden Sand</div>
+          <div class="item-card-desc">Grants a gold bonus buff multiplier per room cleared.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 700g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Storyteller's Die</div>
+          <div class="item-card-desc">Grants improved dice rolls. Unique Author-themed item.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 150g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Rainbow (Psychopast)</div>
+          <div class="item-card-desc">Psychedelic item with multi-element aura effects.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 100g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Slave Monk Robe</div>
+          <div class="item-card-desc">Buddha-theme robe; grants aura buffs when worn.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 150g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Cross</div>
+          <div class="item-card-desc">Jesus-themed protection item. Repels certain undead-type enemies.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 150g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Koran</div>
+          <div class="item-card-desc">Allah-themed holy item; provides protection blessings.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 100g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Knife</div>
+          <div class="item-card-desc">Simple melee weapon. Reliable damage bonus when equipped.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 100g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Fork</div>
+          <div class="item-card-desc">Comedic weapon. Actually does respectable damage for its cost.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 150g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Sand</div>
+          <div class="item-card-desc">Throw it in enemies' eyes. Accuracy-reducing item.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 99g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Magician's Amulet</div>
+          <div class="item-card-desc">+7 mana_damage. Solid early mage item from loot.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 200g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">B&amp;W Potion (SWP)</div>
+          <div class="item-card-desc">Swaps HP and MP values. Situational but powerful.</div>
+          <div class="item-card-footer"><span class="tag tag-green">good</span><span class="item-price">💰 100g</span></div>
+        </div>
+      </div>
+
+      <div class="section-title">Bad Items — Cursed / Harmful</div>
+      <div class="item-grid">
+        <div class="item-card">
+          <div class="item-card-name">Daltonism Potion</div>
+          <div class="item-card-desc">Colored potion — induces colorblindness effect on the player.</div>
+          <div class="item-card-footer"><span class="tag tag-red">bad</span><span class="item-price">💰 100g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Chewing Gum</div>
+          <div class="item-card-desc">Reduces mana damage if mana_damage is below SMART_LEVEL.</div>
+          <div class="item-card-footer"><span class="tag tag-red">bad</span><span class="item-price">💰 10g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Homeless Potion</div>
+          <div class="item-card-desc">Cursed potion. Negative transformation effects on the character.</div>
+          <div class="item-card-footer"><span class="tag tag-red">bad</span><span class="item-price">💰 100g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Wand (Magic)</div>
+          <div class="item-card-desc">Unstable magic. May backfire. Unpredictable damage output.</div>
+          <div class="item-card-footer"><span class="tag tag-red">bad</span><span class="item-price">💰 100g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Rat Potion</div>
+          <div class="item-card-desc">Transforms player into RAT_RACE — changes available corridor actions.</div>
+          <div class="item-card-footer"><span class="tag tag-red">bad</span><span class="item-price">💰 100g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Scroll of Summoning Stones</div>
+          <div class="item-card-desc">Rocks fall from the sky. Deals 50–100 damage to the player.</div>
+          <div class="item-card-footer"><span class="tag tag-red">bad</span><span class="item-price">💰 200g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Stone Potion</div>
+          <div class="item-card-desc">"The cobblestone must lie." Triggers reborn with this death message.</div>
+          <div class="item-card-footer"><span class="tag tag-red">bad</span><span class="item-price">💰 100g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Tree Potion</div>
+          <div class="item-card-desc">"Trees don't do anything." Another cursed reborn trigger.</div>
+          <div class="item-card-footer"><span class="tag tag-red">bad</span><span class="item-price">💰 100g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Voodoo Doll</div>
+          <div class="item-card-desc">Small rag doll. In skilled hands does wonders — actually deals 20–30 self-damage.</div>
+          <div class="item-card-footer"><span class="tag tag-red">bad</span><span class="item-price">💰 50g</span></div>
+        </div>
+      </div>
+
+      <div class="section-title">Loot Items — Found in Rooms</div>
+      <div class="item-grid">
+        <div class="item-card">
+          <div class="item-card-name">Dragon Slayer</div>
+          <div class="item-card-desc">Bonus damage vs. dragons and quinquepedes. Rare sword.</div>
+          <div class="item-card-footer"><span class="tag tag-blue">loot</span><span class="item-price">💰 1,000g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Frostmourne</div>
+          <div class="item-card-desc">Tears flesh and souls. Lich King's sword; premium weapon.</div>
+          <div class="item-card-footer"><span class="tag tag-blue">loot</span><span class="item-price">💰 3,000g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Laser Screwdriver</div>
+          <div class="item-card-desc">Doctor Who item. +100 def, +100 atk, +100 mana. The best single item.</div>
+          <div class="item-card-footer"><span class="tag tag-blue">loot</span><span class="item-price">💰 1,000g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">AK-47</div>
+          <div class="item-card-desc">High damage ranged weapon. Requires bullets. Military loot.</div>
+          <div class="item-card-footer"><span class="tag tag-blue">loot</span><span class="item-price">💰 300g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">M-16</div>
+          <div class="item-card-desc">Vietnam-era assault rifle. Pairs well with the zone theme.</div>
+          <div class="item-card-footer"><span class="tag tag-blue">loot</span><span class="item-price">💰 300g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">M79 Grenade Launcher</div>
+          <div class="item-card-desc">Area damage; uses grenades as ammo. Powerful but slow.</div>
+          <div class="item-card-footer"><span class="tag tag-blue">loot</span><span class="item-price">💰 800g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Minigun</div>
+          <div class="item-card-desc">Sustained high fire rate. One of the highest DPS loot weapons.</div>
+          <div class="item-card-footer"><span class="tag tag-blue">loot</span><span class="item-price">💰 650g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Laser Pistol</div>
+          <div class="item-card-desc">Sci-fi ranged weapon. Uses laser bullets as ammo.</div>
+          <div class="item-card-footer"><span class="tag tag-blue">loot</span><span class="item-price">💰 300g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Knight Helmet</div>
+          <div class="item-card-desc">Tin helmet. Fragile but gives +15 defence.</div>
+          <div class="item-card-footer"><span class="tag tag-blue">loot</span><span class="item-price">💰 120g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Knight Sword</div>
+          <div class="item-card-desc">Sharp as a feather under the rib. Reliable melee weapon.</div>
+          <div class="item-card-footer"><span class="tag tag-blue">loot</span><span class="item-price">💰 150g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Soldier's Helmet</div>
+          <div class="item-card-desc">Metal star helmet. +40 defence. Best armour in the game.</div>
+          <div class="item-card-footer"><span class="tag tag-blue">loot</span><span class="item-price">💰 450g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Mechmod (Mechmod)</div>
+          <div class="item-card-desc">Pants rolled up mechanically. Reduces defence by –20. Trolling.</div>
+          <div class="item-card-footer"><span class="tag tag-blue">loot</span><span class="item-price">💰 15g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Yog-Sothoth's Puzzle</div>
+          <div class="item-card-desc">Lovecraftian cube. Heartbeat inside. Multi-step puzzle interaction.</div>
+          <div class="item-card-footer"><span class="tag tag-blue">loot</span><span class="item-price">💰 150g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Vietnam Star (Ointment)</div>
+          <div class="item-card-desc">Universal healing ointment. Said to cure cancer. Restores HP.</div>
+          <div class="item-card-footer"><span class="tag tag-blue">loot</span><span class="item-price">💰 300g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Fez</div>
+          <div class="item-card-desc">Red with a gold bell. Extremely expensive cosmetic.</div>
+          <div class="item-card-footer"><span class="tag tag-blue">loot</span><span class="item-price">💰 100,000g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Ring</div>
+          <div class="item-card-desc">Generic ring. Deals 10–20 self-damage on equip. Cursed.</div>
+          <div class="item-card-footer"><span class="tag tag-blue">loot</span><span class="item-price">💰 0g</span></div>
+        </div>
+      </div>
+
+      <div class="section-title">Neutral Items</div>
+      <div class="item-grid">
+        <div class="item-card">
+          <div class="item-card-name">Necronomicon</div>
+          <div class="item-card-desc">Human-skin book with blood symbols. Powerful but dangerous.</div>
+          <div class="item-card-footer"><span class="tag tag-gray">neutral</span><span class="item-price">💰 600g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Blank Scroll</div>
+          <div class="item-card-desc">Can be written with magic. Interacts with scribing rooms.</div>
+          <div class="item-card-footer"><span class="tag tag-gray">neutral</span><span class="item-price">💰 1,000g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">PrAtein</div>
+          <div class="item-card-desc">Who said jocks are dumb? +20 damage +5 mana_damage.</div>
+          <div class="item-card-footer"><span class="tag tag-gray">neutral</span><span class="item-price">💰 100g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Wizard Hat</div>
+          <div class="item-card-desc">Has "Wizard" inscribed on it. −1 mana_damage. Cosmetic-heavy.</div>
+          <div class="item-card-footer"><span class="tag tag-gray">neutral</span><span class="item-price">💰 50g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Laser Pointer</div>
+          <div class="item-card-desc">Cat-luring device. Minor utility in specific rooms.</div>
+          <div class="item-card-footer"><span class="tag tag-gray">neutral</span><span class="item-price">💰 10g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Cobblestone</div>
+          <div class="item-card-desc">Error 500 stone. Context-dependent description from room state.</div>
+          <div class="item-card-footer"><span class="tag tag-gray">neutral</span><span class="item-price">💰 50g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Scissors</div>
+          <div class="item-card-desc">Deals 1–2 damage to self on use. Very situational.</div>
+          <div class="item-card-footer"><span class="tag tag-gray">neutral</span><span class="item-price">💰 10g</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Waypoint Sign</div>
+          <div class="item-card-desc">Points to a special room. Unlocks Sign corridor button.</div>
+          <div class="item-card-footer"><span class="tag tag-gray">neutral</span><span class="item-price">💰 300g</span></div>
+        </div>
+      </div>
+
+      <div class="section-title">Pets</div>
+      <div class="item-grid">
+        <div class="item-card">
+          <div class="item-card-name">Bear</div>
+          <div class="item-card-desc">+25 defence. Tanky companion.</div>
+          <div class="item-card-footer"><span class="tag tag-yellow">pet</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Dog</div>
+          <div class="item-card-desc">Loyal companion with combat damage bonus.</div>
+          <div class="item-card-footer"><span class="tag tag-yellow">pet</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Fox</div>
+          <div class="item-card-desc">Provides support in difficult times. Versatile.</div>
+          <div class="item-card-footer"><span class="tag tag-yellow">pet</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Duck (Fire)</div>
+          <div class="item-card-desc">Fire duck companion. Unique room interactions.</div>
+          <div class="item-card-footer"><span class="tag tag-yellow">pet</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Frog</div>
+          <div class="item-card-desc">Pokes with a fork. Low damage but funny.</div>
+          <div class="item-card-footer"><span class="tag tag-yellow">pet</span></div>
+        </div>
+        <div class="item-card">
+          <div class="item-card-name">Homeless</div>
+          <div class="item-card-desc">A homeless companion. Gold interaction bonuses.</div>
+          <div class="item-card-footer"><span class="tag tag-yellow">pet</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: BOSSES ══ -->
+    <div class="page" id="page-bosses">
+      <div class="page-header">
+        <div class="page-eyebrow">Game Systems · Bosses</div>
+        <h2 class="page-title">World Bosses</h2>
+        <p class="page-subtitle">Six global bosses managed by <code>bossmanager.py</code>. One is active at a time. Bosses respawn 1 hour after death. Killing a boss rewards the whole server with coins from its pool.</p>
+      </div>
+
+      <div class="info-block">
+        <h3>How World Bosses Work</h3>
+        <p>The current boss is stored in TinyDB as a shared variable. Any player can encounter and damage the active boss. Boss HP persists across all players — collective effort is required to kill it. When it dies, its coin pool (randomized per spawn) is distributed. After 1 hour, a new random boss spawns.</p>
+      </div>
+
+      <div class="section-title">Boss Roster</div>
+      <div class="boss-grid">
+        <div class="boss-card">
+          <div class="boss-name">Black Knight</div>
+          <div class="boss-hp">❤️ 129,500 HP</div>
+          <div class="boss-reward">💰 Up to 51,000 coins</div>
+        </div>
+        <div class="boss-card">
+          <div class="boss-name">Hellkite Dragon</div>
+          <div class="boss-hp">❤️ 175,500 HP</div>
+          <div class="boss-reward">💰 Up to 71,000 coins</div>
+        </div>
+        <div class="boss-card">
+          <div class="boss-name">Moonlight Butterfly</div>
+          <div class="boss-hp">❤️ 49,500 HP</div>
+          <div class="boss-reward">💰 Up to 21,000 coins — easiest</div>
+        </div>
+        <div class="boss-card">
+          <div class="boss-name">Naping Dragon</div>
+          <div class="boss-hp">❤️ 77,500 HP</div>
+          <div class="boss-reward">💰 Up to 31,000 coins</div>
+        </div>
+        <div class="boss-card">
+          <div class="boss-name">Cthulhu</div>
+          <div class="boss-hp">❤️ 575,900 HP</div>
+          <div class="boss-reward">💰 Up to 251,000 coins — hardest</div>
+        </div>
+        <div class="boss-card">
+          <div class="boss-name">Lich King</div>
+          <div class="boss-hp">❤️ 325,000 HP</div>
+          <div class="boss-reward">💰 Up to 141,000 coins</div>
+        </div>
+      </div>
+
+      <div class="section-title">PvP Tournament</div>
+      <div class="info-block">
+        <h3>Coliseum — Caesar's Tournament</h3>
+        <p>Players sign up via the Coliseum room (caesar.py). When the queue reaches 10 players, <code>tornamentmanager.start_tornament()</code> fires. Every 10 seconds, all players simultaneously deal their queued damage to the next player in a round-robin. Dead players are eliminated. The last survivor wins <strong>10,000–20,000 gold</strong> from Caesar. Attacks are single-use per cycle — players who haven't attacked yet do 0 damage that round.</p>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: GODS ══ -->
+    <div class="page" id="page-gods">
+      <div class="page-header">
+        <div class="page-eyebrow">Game Systems · Gods</div>
+        <h2 class="page-title">Gods System</h2>
+        <p class="page-subtitle">Five gods can be prayed to once per corridor visit. Accumulated devotion unlocks blessings — but abandoning a god triggers wrath.</p>
+      </div>
+
+      <div class="info-block">
+        <h3>How Praying Works</h3>
+        <p>From the corridor, players tap 🙏 Pray to God. They choose from their five gods. Each prayer increments <code>gods_level[god_num]</code>. At <code>GOD_LEVEL = 3</code> threshold, a <code>god_love()</code> blessing fires. Praying too fast triggers the "Not so often" cooldown message. Switching to a different god after committing resets all levels and triggers <code>evilgod()</code> wrath.</p>
+      </div>
+
+      <div class="section-title">The Five Gods</div>
+      <div class="boss-grid">
+        <div class="boss-card">
+          <div class="boss-name">🧘 Buddha</div>
+          <div class="boss-hp" style="color: var(--tag-blue-text)">Blessing: Full MP restore</div>
+          <div class="boss-reward">Wrath: "You're lucky Buddhists are calm"<br>— nothing bad happens (peaceful)</div>
+        </div>
+        <div class="boss-card">
+          <div class="boss-name">✝️ Jesus</div>
+          <div class="boss-hp" style="color: var(--tag-blue-text)">Blessing: Adds wine to inventory</div>
+          <div class="boss-reward">Wrath: Deals 5–10 HP damage. "Jesus got angry and killed your Egyptian children."</div>
+        </div>
+        <div class="boss-card">
+          <div class="boss-name">☪️ Allah</div>
+          <div class="boss-hp" style="color: var(--tag-blue-text)">Blessing: Full HP restore</div>
+          <div class="boss-reward">Wrath: Deals 20–30 HP damage. "Allah does not tolerate mistakes."</div>
+        </div>
+        <div class="boss-card">
+          <div class="boss-name">📖 The Author (Narrator)</div>
+          <div class="boss-hp" style="color: var(--tag-blue-text)">Blessing: Opens special ice cream room</div>
+          <div class="boss-reward">Wrath: Gives intoxicated_shoes item. "I'm in charge here, right?"</div>
+        </div>
+        <div class="boss-card">
+          <div class="boss-name">⚔️ God-Emperor</div>
+          <div class="boss-hp" style="color: var(--tag-blue-text)">Blessing: Iron Halo defence buff</div>
+          <div class="boss-reward">Wrath: EmperorBurn buff (ongoing fire damage). "Doused with promethium."</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: ZONES ══ -->
+    <div class="page" id="page-zones">
+      <div class="page-header">
+        <div class="page-eyebrow">Game Systems · Zones</div>
+        <h2 class="page-title">Zones &amp; Levels</h2>
+        <p class="page-subtitle">Two room packs (zones) with a multi-floor dungeon level system. Players traverse floors and can travel up/down between discovered levels.</p>
+      </div>
+
+      <div class="arch-grid">
+        <div class="arch-card">
+          <h4>Default Zone</h4>
+          <div class="arch-file">rooms/default/</div>
+          <p>The main dungeon. 4 difficulty tiers: easy, medium, hard, expert. Contains 40+ usual rooms, 14 special rooms, and 28 monster types. All players start here in the <code>easy</code> level.</p>
+        </div>
+        <div class="arch-card">
+          <h4>Vietnam Zone</h4>
+          <div class="arch-file">rooms/vietnam/</div>
+          <p>Unlockable alternate zone with a Vietnam War theme. New monster types (Bush Soldier, Hippie, Vietnamese Army), Vietnam-specific missions (Caravan, Leprechaun, Main mission), and zone-exclusive rooms. Accessed by changing <code>rooms_pack</code>.</p>
+        </div>
+      </div>
+
+      <div class="section-title">Level / Floor System</div>
+      <div class="info-block">
+        <h3>Multi-Floor Dungeon</h3>
+        <p>Players start on the <code>easy</code> floor. As they progress, new levels unlock: <code>easy → medium → hard → expert</code>. The corridor shows ⬆ Go Upstairs and ⬇ Go Down buttons when adjacent floors are available. When changing floors, the bot displays a scraped list of room names found on that floor (a "someone scratched it on the wall" narrative). Each floor has its own monster pool weighted to its difficulty.</p>
+      </div>
+
+      <div class="section-title">Mission System</div>
+      <div class="info-block">
+        <h3>Three Concurrent Missions</h3>
+        <p>On character creation, three missions are initialised: <code>main</code> (story), <code>tips</code> (30-room tutorial path), and <code>caravan</code> (20-room side quest). Missions are stored as a stack per player. <code>get_last_mission()</code> returns the active one; <code>pop_mission()</code> completes it. Mission rooms are gated and progress through multi-part scripted encounters in <code>rooms/vietnam/missions/</code>.</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ═══════════════════ DATA ═══════════════════
+
+const COMMANDS = {
+  public: [
+    {
+      name: '/start',
+      short: 'Begin or restart the game',
+      access: 'public',
+      desc: 'Creates a new player character. If an existing character is alive, prompts for confirmation before resetting. The bot asks for a name, optionally suggests a variant, then launches the intro narrative and corridor.',
+      syntax: '/start',
+    },
+    {
+      name: '/stop',
+      short: 'Delete your character permanently',
+      access: 'public',
+      desc: 'Permanently deletes the player\'s .usr file. Tracks a "Stop" event in analytics. Character is gone immediately with no confirmation prompt — unlike /start restart which requires typing "Start a new game".',
+      syntax: '/stop',
+    },
+    {
+      name: '/setname',
+      short: 'Change your character\'s display name',
+      access: 'public',
+      desc: 'Sets the player\'s name without going through the full restart flow. Only changes the display name; all stats, inventory, and progress remain intact.',
+      syntax: '/setname <new name>',
+    },
+    {
+      name: '/leaderboard',
+      short: 'View top players or death causes',
+      access: 'public',
+      desc: 'Displays a ranked leaderboard. Default shows top 10 by rooms cleared. Pass "death" as argument to show top death causes. Pass a number as third argument to change count. Fetches Telegram usernames via getChat() for each entry.',
+      syntax: '/leaderboard [table_name] [count]\n\nExamples:\n  /leaderboard           — top 10 rooms cleared\n  /leaderboard death     — top 10 death causes\n  /leaderboard rooms 25  — top 25 rooms cleared',
+    },
+    {
+      name: '/debug',
+      short: 'Print all your character\'s internal state',
+      access: 'public',
+      desc: 'Dumps all User object attributes as plain text: UID, name, HP, MP, gold, items, gods, state, buffs, missions, levels, room, variables, and visited_rooms. Useful for debugging stuck states or verifying game logic.',
+      syntax: '/debug',
+    },
+    {
+      name: '/rate',
+      short: 'Get your Botan referral link',
+      access: 'public',
+      desc: 'Generates a unique referral/analytics tracking link via Botan.io. The link can be shared to track how many users joined via your invitation. Requires BOTANIO_TOKEN to be set.',
+      syntax: '/rate',
+    },
+  ],
+  mod: [
+    {
+      name: '/room',
+      short: 'Force-open a specific room for yourself',
+      access: 'mod',
+      desc: 'Moderator tool to teleport directly into any room by type and name. Used for testing room content, debugging encounter logic, or reproducing player-reported bugs.',
+      syntax: '/room <type> <name>\n\nExamples:\n  /room usual devil\n  /room special icecream\n  /room monster dragon',
+    },
+    {
+      name: '/give',
+      short: 'Give yourself any item',
+      access: 'mod',
+      desc: 'Adds any item directly to your inventory by specifying its buff category and code_name. Useful for testing item effects without going through the shop or loot drops.',
+      syntax: '/give <buff_type> <item_code_name>\n\nExamples:\n  /give good hp_pot\n  /give loot dragon_sword\n  /give bad rat_pot',
+    },
+    {
+      name: '/gold',
+      short: 'Add gold to your wallet',
+      access: 'mod',
+      desc: 'Directly modifies the player\'s gold count by the specified integer. Can be negative to remove gold. No broadcast to other players.',
+      syntax: '/gold <integer>\n\nExamples:\n  /gold 5000\n  /gold -100',
+    },
+    {
+      name: '/pet',
+      short: 'Give yourself a pet companion',
+      access: 'mod',
+      desc: 'Sets a pet for the moderator\'s character. The pet code name must match a file in items/pets/. The real_name argument is the displayed name for the pet (separate from the species).',
+      syntax: '/pet <pet_code> <real_name>\n\nExamples:\n  /pet fox Vixie\n  /pet bear Bruno',
+    },
+    {
+      name: '/cesar',
+      short: 'Toggle the Caesar tournament room',
+      access: 'mod',
+      desc: 'Flips the ces boolean variable in the database. When disabled, the tournament room is hidden from the corridor button list. Used to temporarily suspend tournament sign-ups.',
+      syntax: '/cesar',
+    },
+    {
+      name: '/debug',
+      short: 'Print character debug info (also public)',
+      access: 'mod',
+      desc: 'Same as the public /debug command. Available to both players and moderators.',
+      syntax: '/debug',
+    },
+  ],
+  admin: [
+    {
+      name: '/notify',
+      short: 'Broadcast a message to all players',
+      access: 'admin',
+      desc: 'Sends a text message to every registered Telegram user\'s chat. Iterates all .usr files in the users/ directory, skipping VK users (uid starts with "vk"). Failed sends are logged but do not halt the broadcast. Used for maintenance notices, game events, or announcements.',
+      syntax: '/notify <message text>\n\nExample:\n  /notify Server will restart in 10 minutes!',
+    },
+    {
+      name: '/zero',
+      short: 'Reset the active yes/no vote count',
+      access: 'admin',
+      desc: 'Resets question_yes, question_no, and the asked[] list back to zero. Clears the question.int persistence file. Used to start a fresh vote on a new question.',
+      syntax: '/zero',
+    },
+  ],
+  vote: [
+    {
+      name: '/yes',
+      short: 'Cast a YES vote on the current question',
+      access: 'vote',
+      desc: 'Each user can vote once (tracked by UID in the asked[] list). Increments question_yes counter and saves state to question.int. Returns a "Only 1 time ;)" message if the user already voted.',
+      syntax: '/yes',
+    },
+    {
+      name: '/no',
+      short: 'Cast a NO vote on the current question',
+      access: 'vote',
+      desc: 'Same mechanics as /yes but increments question_no. One vote per user enforced across both /yes and /no.',
+      syntax: '/no',
+    },
+    {
+      name: '/question_status',
+      short: 'View current vote tallies',
+      access: 'vote',
+      desc: 'Returns the current count of Yes and No votes. Available to all users — no permission restriction. Does not reveal which users voted which way.',
+      syntax: '/question_status',
+    },
+    {
+      name: '/zero',
+      short: 'Reset vote counters (admin only)',
+      access: 'admin',
+      desc: 'Resets all vote state. Admin-only. See Admin Commands section for full details.',
+      syntax: '/zero',
+    },
+  ],
+};
+
+const FILE_TREE = [
+  { type: 'folder', name: 'RogueBot-master/', depth: 0, desc: 'Project root', children: 284 },
+  { type: 'file', name: 'main.py', depth: 1, desc: 'Telegram bot entry point. Registers all command handlers, starts background jobs (divine_intervention every 3h, tournament update every 10s), and manages message queue.' },
+  { type: 'file', name: 'main_vk.py', depth: 1, desc: 'VKontakte platform entry point. Same game engine, different transport.' },
+  { type: 'file', name: 'main_alice.py', depth: 1, desc: 'Yandex Alice voice assistant integration entry point.' },
+  { type: 'file', name: 'config.py', depth: 1, desc: 'Configuration via environment variables: TELEGRAM_TOKEN, VK_LOGIN/PASS, ADMINS_IDS, MODERS_IDS, DATABASE_PATH, USERS_PATH, LANG, BOTANIO_TOKEN, Twitter OAuth keys.' },
+  { type: 'file', name: 'constants.py', depth: 1, desc: 'Game constants: god indices, dice bounds (DICE_MAX=32), aura names, sticker IDs, race types, and Twi_phrases for the special Twi monster.' },
+  { type: 'file', name: 'usermanager.py', depth: 1, desc: 'CRUD layer for User pickle files. Provides get_user(), save_user(), new_user(), delete(), random_user(), and wrapper helpers for main.py.' },
+  { type: 'file', name: 'bossmanager.py', depth: 1, desc: 'Global world boss state. Creates, migrates, kills, and respawns bosses (6 types). Boss respawns after 3600 seconds. Stored in TinyDB.' },
+  { type: 'file', name: 'tornamentmanager.py', depth: 1, desc: 'PvP tournament engine. Queue-based sign-ups; auto-starts at 10 players. Round-robin damage exchange every 10s. Winner gets 10-20k gold.' },
+  { type: 'file', name: 'twimanager.py', depth: 1, desc: 'Twitter integration layer for Twi monster. Posts results when the special Twi enemy is killed or kills the player.' },
+  { type: 'file', name: 'botan.py', depth: 1, desc: 'Botan.io analytics SDK wrapper. Used by statistics.py for event tracking and /rate referral links.' },
+  { type: 'file', name: 'statistics.py', depth: 1, desc: 'User analytics helper. Tracks named events (Start, Setname, Stop) via Botan.' },
+  { type: 'file', name: 'build.py', depth: 1, desc: 'Compiles all .py files to .pyc for obfuscated distribution.' },
+  { type: 'file', name: 'db.json', depth: 1, desc: 'TinyDB flat-file JSON database. Stores: boss state, leaderboard scores, tournament data, shared variables.' },
+
+  { type: 'folder', name: 'user/', depth: 1, desc: 'User class definition split across 14 mixin files', children: 14 },
+  { type: 'file', name: '__init__.py', depth: 2, desc: 'User class root. Defines __init__ with all 30+ player attributes. Imports all definition files as class methods.' },
+  { type: 'file', name: 'corridor_defenition.py', depth: 2, desc: 'open_corridor() and corridor() — the main between-room menu logic. Renders stats, buttons (next door, shop, inventory, pray, levels, sign).' },
+  { type: 'file', name: 'fight_defenition.py', depth: 2, desc: 'Combat actions: get_fight_actions(), fight_dice(), fight_action(), fight_answer(), escape(), won(). Handles physical/magic/item attacks.' },
+  { type: 'file', name: 'gods_defenition.py', depth: 2, desc: 'prayto(), god_love(), evilgod(), pray(), divine_intervention(). God devotion system with blessings and wrath.' },
+  { type: 'file', name: 'inventory_defenition.py', depth: 2, desc: 'open_inventory(), inventory(). Paginated 5-item inventory browser. Actions: throw away, sell, activate/deactivate.' },
+  { type: 'file', name: 'shop_defenition.py', depth: 2, desc: 'open_shop(), buy(), shop(). Alchemist shop with 4 random items per visit. One visit per corridor cycle.' },
+  { type: 'file', name: 'stats_defenition.py', depth: 2, desc: 'All stat calculations: get_damage(), get_defence(), get_charisma(), get_mana_damage(), gold_bonus. Also: buffs, variables, perma_variables, heal, show_characteristics.' },
+  { type: 'file', name: 'room_defenition.py', depth: 2, desc: 'open_room(), in_room(), make_damage(), throw_dice(), dice(), leave(). Room state management and damage application.' },
+  { type: 'file', name: 'death_defenition.py', depth: 2, desc: 'death(), reborn(), update_leaderbord(). Records death reason to TinyDB leaderboard. Handles reborn (restart) flow.' },
+  { type: 'file', name: 'meet_defenition.py', depth: 2, desc: 'name_given(), name_confirm(), first(). Onboarding flow — name entry, AI name suggestion, first story intro.' },
+  { type: 'file', name: 'items_defenition.py', depth: 2, desc: 'add_item(), remove_item(), get_items(), has_item(), get_counted_items(), activate/deactivate helpers.' },
+  { type: 'file', name: 'pets_defenition.py', depth: 2, desc: 'new_pet(), on_pet(), get_pet(), pet_gone(). Pet companion management with combat and gold bonuses.' },
+  { type: 'file', name: 'missions_defenition.py', depth: 2, desc: 'new_mission(), get_last_mission(), pop_mission(). Mission stack for story/side quests.' },
+  { type: 'file', name: 'levels_defenition.py', depth: 2, desc: 'prepare_boss(), get_next_level(), get_prev_level(). Floor traversal logic.' },
+  { type: 'file', name: 'money_defenition.py', depth: 2, desc: 'paid(), steal(), give_gold(). Gold transaction helpers.' },
+  { type: 'file', name: 'save_defenition.py', depth: 2, desc: 'save(), recover(). Checkpoint save/load mechanics for the Save Scroll item.' },
+
+  { type: 'folder', name: 'databasemanager/', depth: 1, desc: 'TinyDB wrapper modules', children: 4 },
+  { type: 'file', name: '__init__.py', depth: 2, desc: 'Main DB interface: get_variable(), set_variable(), get_list(), add_to_list(), clear_list(), remove_from_list(), get_leaderboard().' },
+  { type: 'file', name: 'leaderboard_model.py', depth: 2, desc: 'Leaderboard TinyDB table model. Stores UID, name, score, death_reason. Supports ROOMS_TABLE and death table.' },
+  { type: 'file', name: 'lists_model.py', depth: 2, desc: 'List storage model for tournament queues and player lists.' },
+  { type: 'file', name: 'variable_model.py', depth: 2, desc: 'Key-value variable storage model. Used by bossmanager and various rooms.' },
+
+  { type: 'folder', name: 'items/', depth: 1, desc: '70+ item modules across 5 categories', children: 72 },
+  { type: 'folder', name: 'good/', depth: 2, desc: '24 beneficial items sold in shop or found as loot. Healing potions, scrolls, weapons, armor.', children: 24 },
+  { type: 'folder', name: 'bad/', depth: 2, desc: '9 cursed/harmful items. Sold in shop deceptively. Cause damage, transformations, or death.', children: 9 },
+  { type: 'folder', name: 'loot/', depth: 2, desc: '25 loot items found in rooms. Weapons, armor, trinkets. Not sold in the main shop.', children: 25 },
+  { type: 'folder', name: 'neutral/', depth: 2, desc: '14 neutral items with mixed or conditional effects.', children: 14 },
+  { type: 'folder', name: 'pets/', depth: 2, desc: '6 pet companions: Bear, Dog, Fox, Duck, Frog, Homeless.', children: 6 },
+  { type: 'file', name: 'itemloader.py', depth: 2, desc: 'Dynamic item module importer. Builds shop pool (4 random items). Provides load_item(buff, code_name) and load_shop_items().' },
+
+  { type: 'folder', name: 'rooms/', depth: 1, desc: '60+ room encounter modules across 2 zones', children: 130 },
+  { type: 'folder', name: 'default/', depth: 2, desc: 'Main dungeon zone', children: 100 },
+  { type: 'folder', name: 'usual/', depth: 3, desc: '41 standard encounter rooms: NPCs, puzzles, shops, dialogue trees', children: 41 },
+  { type: 'folder', name: 'special/', depth: 3, desc: '14 special/hidden rooms: pop-culture encounters, unique mechanics', children: 14 },
+  { type: 'folder', name: 'monster/', depth: 3, desc: '28 monster rooms across easy/medium/hard/expert tiers', children: 28 },
+  { type: 'folder', name: 'vietnam/', depth: 2, desc: 'Vietnam War themed alternate zone', children: 30 },
+  { type: 'folder', name: 'missions/', depth: 3, desc: 'Scripted multi-part missions: main (3 parts), caravan (3 parts), leprechaun, tips tutorial', children: 12 },
+  { type: 'folder', name: 'monster/', depth: 3, desc: 'Vietnam-specific enemies: Bush Soldier (280HP), Hippie (200HP), Vietnamese Army (1500HP)', children: 3 },
+  { type: 'file', name: 'roomloader.py', depth: 2, desc: 'Dynamic room importer. Resolves (zone, type, name) → Python module. Supports level-weighted random selection and room listing for floor previews.' },
+
+  { type: 'folder', name: 'localizations/', depth: 1, desc: 'Localization files', children: 2 },
+  { type: 'file', name: 'ru.json', depth: 2, desc: 'All game strings in English (despite filename). 80+ keys covering UI text, combat messages, god dialogues, shop messages, inventory labels, death messages.' },
+  { type: 'file', name: 'locale_manager.py', depth: 2, desc: 'locale_manager.get(key) wrapper. Loads JSON by LANG config. Fallback to key name if missing.' },
+
+  { type: 'folder', name: 'utils/', depth: 1, desc: 'Utility helpers', children: 4 },
+  { type: 'file', name: 'buffs.py', depth: 2, desc: 'Buff class definitions: EmperorBurn (ongoing fire damage), EmperorDefence (iron halo), gold buff, and base Buff class with damage_plus, defence, gold_bonus, mana_damage fields.' },
+  { type: 'file', name: 'costumes.py', depth: 2, desc: 'Costume system. Players can equip visual costumes that may modify stats or room interactions.' },
+  { type: 'file', name: 'names.py', depth: 2, desc: 'Name generator utilities. Used by the bot to suggest alternative names during character creation.' },
+  { type: 'file', name: 'potions.py', depth: 2, desc: 'Potion color randomization. Assigns random colors to potions so the player cannot identify them by name alone (a roguelike staple mechanic).' },
+];
+
+// ═══════════════════ RENDER FUNCTIONS ═══════════════════
+
+function renderCommands(cmds, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = cmds.map((cmd, i) => {
+    const accessColor = { public: 'tag-green', mod: 'tag-yellow', admin: 'tag-red', vote: 'tag-blue' }[cmd.access] || 'tag-gray';
+    return `
+      <div class="cmd-card">
+        <div class="cmd-header" onclick="toggleCmd(this)">
+          <span class="cmd-name">${cmd.name}</span>
+          <span class="cmd-short">${cmd.short}</span>
+          <div class="cmd-tags">
+            <span class="tag ${accessColor}">${cmd.access}</span>
+          </div>
+        </div>
+        <div class="cmd-body">
+          <p>${cmd.desc}</p>
+          <div class="cmd-syntax">${cmd.syntax}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleCmd(header) {
+  const body = header.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+function renderFileTree() {
+  const container = document.getElementById('filetree-body');
+  container.innerHTML = FILE_TREE.map(item => {
+    const indent = Array(item.depth).fill('<span class="tree-indent">│  </span>').join('');
+    const icon = item.type === 'folder' ? '📁' : '📄';
+    const nameClass = item.type === 'folder' ? 'folder' : '';
+    const count = item.children ? `<span class="tree-count">${item.children} files</span>` : '';
+    return `
+      <div class="tree-item">
+        ${indent}
+        <span class="tree-icon">${icon}</span>
+        <span class="tree-name ${nameClass}">${item.name}</span>
+        ${count}
+        <div class="tree-tooltip">
+          <div class="tt-title">${item.name}</div>
+          ${item.desc}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ═══════════════════ PAGE NAVIGATION ═══════════════════
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+
+  const page = document.getElementById('page-' + id);
+  if (page) page.classList.add('active');
+
+  const link = [...document.querySelectorAll('.nav-link')].find(l => {
+    return l.getAttribute('onclick') && l.getAttribute('onclick').includes("'" + id + "'");
+  });
+  if (link) link.classList.add('active');
+
+  window.scrollTo(0, 0);
+
+  // Close mobile sidebar
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+// ═══════════════════ LUCIDE ICONS ═══════════════════
+lucide.createIcons();
+
+// ═══════════════════ ANIMATED BACKGROUND (neon multicolor) ═══════════════════
+(function() {
+  const canvas = document.getElementById("bg-canvas");
+  const ctx = canvas.getContext("2d");
+  const COLORS = [
+    'rgba(0,229,255,',   // cyan
+    'rgba(168,85,247,',  // violet
+    'rgba(244,63,94,',   // rose
+    'rgba(245,158,11,',  // amber
+    'rgba(34,197,94,',   // green
+  ];
+  const POINT_COUNT = 80;
+  const MAX_DIST = 150;
+  let pts = [];
+
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  window.addEventListener('resize', resize);
+  resize();
+
+  class Pt {
+    constructor() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.vx = (Math.random() - 0.5) * 0.5;
+      this.vy = (Math.random() - 0.5) * 0.5;
+      this.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+      this.r = 1.2 + Math.random() * 1.0;
+      this.pulse = Math.random() * Math.PI * 2;
+    }
+    move() {
+      this.x += this.vx; this.y += this.vy;
+      this.pulse += 0.018;
+      if (this.x < 0 || this.x > canvas.width)  this.vx *= -1;
+      if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+    }
+    draw() {
+      const alpha = 0.55 + 0.35 * Math.sin(this.pulse);
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+      ctx.fillStyle = this.color + alpha + ')';
+      ctx.fill();
+      const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.r * 6);
+      grad.addColorStop(0, this.color + (alpha * 0.28) + ')');
+      grad.addColorStop(1, this.color + '0)');
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r * 6, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+  }
+
+  for (let i = 0; i < POINT_COUNT; i++) pts.push(new Pt());
+
+  function connect() {
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
+        const d = Math.sqrt(dx*dx + dy*dy);
+        if (d < MAX_DIST) {
+          const alpha = (1 - d / MAX_DIST) * 0.24;
+          const grad = ctx.createLinearGradient(pts[i].x, pts[i].y, pts[j].x, pts[j].y);
+          grad.addColorStop(0, pts[i].color + alpha + ')');
+          grad.addColorStop(1, pts[j].color + alpha + ')');
+          ctx.beginPath();
+          ctx.moveTo(pts[i].x, pts[i].y);
+          ctx.lineTo(pts[j].x, pts[j].y);
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = 0.65;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    pts.forEach(p => { p.move(); p.draw(); });
+    connect();
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();
+
+// ═══════════════════ KEY TERM HIGHLIGHTER ═══════════════════
+(function() {
+  const termMap = {
+    cyan:   ['python-telegram-bot','CommandHandler','MessageHandler','usermanager','pickle',
+             'TinyDB','start_polling','roomloader','itemloader','databasemanager',
+             'get_user','save_user','main.py','main_vk.py','main_alice.py',
+             'db.json','bossmanager','tornamentmanager','locale_manager'],
+    violet: ['User','corridor','inventory','shop','state machine','definition','mixin',
+             'usermanager.py','user/','utils/','costumes','names.py','potions.py'],
+    rose:   ['death','boss','damage','leaderboard','respawn','ADMINS_IDS','MODERS_IDS',
+             'cursed','harmful','wrath','kill'],
+    amber:  ['gold','coin','reward','buy','sell','price','DICE_MAX','SMART_LEVEL',
+             'DUMMY_LEVEL','tournament','Coliseum','10-20k','4 random'],
+    green:  ['save','recover','heal','buff','pet','blessing','divine','god',
+             'good/','loot/','neutral/','pets/','Pickle','JSON','VKontakte'],
+  };
+  const colorClass = { cyan:'kterm', violet:'kterm-violet', rose:'kterm-rose', amber:'kterm-amber', green:'kterm-green' };
+  const allTerms = [];
+  Object.entries(termMap).forEach(([c, arr]) => arr.forEach(t => allTerms.push({term:t,color:c})));
+  allTerms.sort((a,b) => b.term.length - a.term.length);
+
+  function walkNode(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent;
+      for (const {term, color} of allTerms) {
+        const idx = text.indexOf(term);
+        if (idx !== -1) {
+          const frag = document.createDocumentFragment();
+          frag.appendChild(document.createTextNode(text.slice(0, idx)));
+          const span = document.createElement('span');
+          span.className = colorClass[color];
+          span.textContent = term;
+          frag.appendChild(span);
+          const rest = document.createTextNode(text.slice(idx + term.length));
+          frag.appendChild(rest);
+          node.parentNode.replaceChild(frag, node);
+          walkNode(rest);
+          return;
+        }
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      if (['SCRIPT','STYLE','CODE','PRE','A','SPAN'].includes(node.tagName)) return;
+      Array.from(node.childNodes).forEach(walkNode);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.page-subtitle, .info-block p, .flow-content p, .arch-card p, .cmd-body p').forEach(el => walkNode(el));
+  });
+})();
+
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Populate all command pages
+  renderCommands(COMMANDS.public, 'cmd-all-public');
+  renderCommands(COMMANDS.mod, 'cmd-all-mod');
+  renderCommands(COMMANDS.admin, 'cmd-all-admin');
+  renderCommands(COMMANDS.vote, 'cmd-all-vote');
+
+  renderCommands(COMMANDS.public, 'cmd-player-list');
+  renderCommands([...COMMANDS.mod, ...COMMANDS.admin], 'cmd-admin-list');
+  renderCommands(COMMANDS.vote, 'cmd-vote-list');
+
+  renderFileTree();
+
+  // Animate stat numbers
+  document.querySelectorAll('.stat-value').forEach(el => {
+    const target = parseInt(el.textContent.replace(/\D/g, ''));
+    if (isNaN(target) || target > 500) return;
+    let current = 0;
+    const step = Math.ceil(target / 30);
+    const timer = setInterval(() => {
+      current = Math.min(current + step, target);
+      el.textContent = el.textContent.includes('+') ? current + '+' : current;
+      if (current >= target) clearInterval(timer);
+    }, 25);
+  });
+});
+</script>
+</body>
+</html>
