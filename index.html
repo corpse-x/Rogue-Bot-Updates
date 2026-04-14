@@ -905,7 +905,7 @@
     <div class="sidebar-logo">
       <div class="logo-mark">Telegram Bot</div>
       <h1>RogueBot</h1>
-      <span class="version-badge">py310 · master</span>
+      <span class="version-badge">py310 · PTB v13 · MongoDB</span>
     </div>
 
     <div class="nav-section">
@@ -975,10 +975,19 @@
       </a>
     </div>
 
+      <div class="nav-section">
+        <div class="nav-section-label nav-item-anim" style="animation-delay:0.80s">Setup</div>
+        <a class="nav-link nav-item-anim" style="animation-delay:0.84s" onclick="showPage('deployment')">
+          <i data-lucide="rocket"></i> Deployment
+        </a>
+        <a class="nav-link nav-item-anim" style="animation-delay:0.88s" onclick="showPage('changelog')">
+          <i data-lucide="git-commit"></i> Changelog
+        </a>
+      </div>
     <div class="sidebar-footer">
-      RogueBot · Telegram RPG<br>
-      Python 3.10 · python-telegram-bot<br>
-      284 source files
+      RogueBot-EN · Telegram RPG<br>
+      Python 3.10 · PTB 13.15 · MongoDB<br>
+      274 source files · EN locale
     </div>
   </nav>
 
@@ -996,7 +1005,7 @@
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-label">Total Files</div>
-          <div class="stat-value">284</div>
+          <div class="stat-value">274</div>
           <div class="stat-sub">Python source files</div>
         </div>
         <div class="stat-card">
@@ -1030,7 +1039,7 @@
 
       <div class="info-block">
         <h3>Persistent State via Pickle</h3>
-        <p>Each player's state (HP, MP, gold, inventory, current room, gods level, missions, buffs, pets, costume, variables) is serialized to a <code>.usr</code> file using Python pickle. A JSON flat-file database (<code>db.json</code> via TinyDB) stores global state: leaderboards, boss state, tournament data, and shared variables.</p>
+        <p>Each player's state (HP, MP, gold, inventory, current room, gods level, missions, buffs, pets, costume, variables) is serialized to a <code>.usr</code> file using Python pickle. A MongoDB database (via <code>pymongo</code>) stores global state: leaderboards, boss state, tournament data, and shared variables. Previously TinyDB, migrated to MongoDB in the EN modernization build.</p>
       </div>
 
       <div class="info-block">
@@ -1044,12 +1053,12 @@
         <div class="arch-card">
           <h4>python-telegram-bot</h4>
           <div class="arch-file">main.py</div>
-          <p>Telegram integration layer. Uses <code>CommandHandler</code>, <code>MessageHandler</code>, and <code>Job</code> queues for background tasks (divine intervention every 3h, tournament updates every 10s).</p>
+          <p>Telegram integration layer. Updated to PTB v13 — <code>CommandHandler</code> and <code>MessageHandler</code> now use <code>(update, context)</code> callback signature. Background tasks use <code>JobQueue.run_repeating()</code>. No deprecated <code>@run_async</code> or <code>Job()</code> constructor.</p>
         </div>
         <div class="arch-card">
-          <h4>TinyDB (JSON)</h4>
+          <h4>MongoDB (pymongo)</h4>
           <div class="arch-file">databasemanager/__init__.py</div>
-          <p>Flat-file JSON database for global state. Stores leaderboards, boss HP, tournament brackets, and shared variables. No external DB required.</p>
+          <p>MongoDB database for global state. Stores leaderboards, boss HP, tournament brackets, and shared variables. Replaced TinyDB/mongothon. Requires <code>mongod</code> running locally. Uses native pymongo <code>update_one(upsert=True)</code> and <code>aggregate()</code>.</p>
         </div>
         <div class="arch-card">
           <h4>Pickle User State</h4>
@@ -1072,21 +1081,68 @@
         <p class="page-subtitle">Latest engineering-level maintenance changes made to stabilize and modernize the bot runtime.</p>
       </div>
 
-      <div class="section-title">Recent Changes</div>
+      <div class="section-title">python-telegram-bot v13 Migration</div>
 
       <div class="info-block">
-        <h3>Core Codebase Was Reworked for Stability</h3>
-        <p>The project code was comprehensively reworked to remove legacy breakpoints and improve runtime compatibility. Critical flow paths were cleaned and updated so the bot can run reliably on modern Python runtime without startup failures.</p>
+        <h3>Handler Signature: <code>(bot, update)</code> → <code>(update, context)</code></h3>
+        <p>All command and message handlers in <code>main.py</code> were rewritten to use the PTB v13 callback-style signature <code>(update, context)</code>. The old positional <code>(bot, update)</code> pattern was removed from every handler function. <code>context.bot</code> is now used instead of the free <code>bot</code> parameter.</p>
       </div>
 
       <div class="info-block">
-        <h3>Libraries Were Bumped to Current Versions</h3>
-        <p>Dependencies were upgraded to modern compatible versions used by this project, and integration points were updated accordingly. This includes Telegram bot library compatibility and modernized data-layer dependencies to reduce old package issues.</p>
+        <h3>Job Queue API: <code>Job()</code> → <code>JobQueue.run_repeating()</code></h3>
+        <p>The legacy <code>Job(divine_intervention, 3*60*60.0)</code> + <code>updater.job_queue.put()</code> pattern was replaced with <code>jq.run_repeating(divine_intervention, interval=3*60*60, first=10)</code>. All three background jobs (divine intervention, tournament update, queue reply) now use the modern PTB v13 API. The <code>@run_async</code> decorator was removed entirely — deprecated and unused in v13.</p>
+      </div>
+
+      <div class="section-title">Database: TinyDB + mongothon → MongoDB (pymongo)</div>
+
+      <div class="info-block">
+        <h3>mongothon Removed — Dead Package</h3>
+        <p><code>mongothon3</code> was a dead PyPI package that caused import failures on install. All three model files (<code>leaderboard_model.py</code>, <code>variable_model.py</code>, <code>lists_model.py</code>) were rewritten using plain <code>pymongo</code> with native <code>find_one</code>, <code>update_one(upsert=True)</code>, and <code>insert_one</code> calls.</p>
       </div>
 
       <div class="info-block">
-        <h3>Production Readiness Outcome</h3>
-        <p>The result is a cleaner, deployment-ready codebase with updated package pins and improved operational consistency for hosted environments.</p>
+        <h3>Death Aggregation: <code>.group()</code> → <code>$group</code> Pipeline</h3>
+        <p>The deprecated MongoDB <code>collection.group()</code> call in <code>leaderboard_model.py</code> was replaced with a proper <code>aggregate()</code> pipeline using <code>$match</code>, <code>$group</code>, <code>$sort</code>, and <code>$limit</code>. This is the correct approach for pymongo 4.x.</p>
+      </div>
+
+      <div class="info-block">
+        <h3>Bug Fix: <code>add_to_list()</code> Wrong Variable</h3>
+        <p>The original <code>databasemanager/__init__.py</code> called <code>Lists.add_to_list(name, val, force)</code> — passing the undefined local name <code>val</code> instead of the parameter <code>value</code>. This caused a silent <code>NameError</code> on all list additions. Fixed.</p>
+      </div>
+
+      <div class="section-title">Import System: <code>imp</code> → <code>importlib</code></div>
+
+      <div class="info-block">
+        <h3>itemloader.py and roomloader.py — Replaced Deprecated <code>imp</code></h3>
+        <p>Both dynamic module loaders used <code>imp.load_source()</code> and <code>imp.load_compiled()</code>, which were deprecated in Python 3.4 and removed in Python 3.12. Replaced with <code>importlib.machinery.SourceFileLoader</code> / <code>SourcelessFileLoader</code> and <code>spec_from_file_location</code> + <code>module_from_spec</code>. Also replaced the deprecated <code>room_loader.load_module()</code> call with <code>spec.loader.exec_module(mod)</code>.</p>
+      </div>
+
+      <div class="section-title">Logging: <code>logger.warn()</code> → <code>logger.warning()</code></div>
+
+      <div class="info-block">
+        <h3>Python 3.12 Compatibility</h3>
+        <p><code>logger.warn()</code> was deprecated since Python 3.2 and removed in 3.12. All occurrences across <code>main.py</code>, <code>itemloader.py</code>, <code>roomloader.py</code>, and <code>localizations/locale_manager.py</code> were updated to <code>logger.warning()</code>.</p>
+      </div>
+
+      <div class="section-title">Requirements & Removed Dead Packages</div>
+
+      <div class="info-block">
+        <h3>requirements.txt — Pinned to Modern Versions</h3>
+        <p>Dead and incompatible packages removed: <code>mongothon3</code>, <code>vk_api</code>, <code>codecov</code>. Replaced with pinned working versions: <code>python-telegram-bot==13.15</code>, <code>pymongo==4.6.1</code>, <code>tinydb==4.8.0</code>, <code>requests==2.31.0</code>, <code>tweepy==4.14.0</code>, <code>sortedcontainers==2.4.0</code>.</p>
+      </div>
+
+      <div class="section-title">English Locale</div>
+
+      <div class="info-block">
+        <h3>New <code>localizations/en.json</code> + <code>config.LANG = 'en'</code></h3>
+        <p>A complete English locale file (<code>en.json</code>) was created with all 80+ game strings, UI labels, combat messages, god dialogues, shop receipts, and inventory labels. The config now defaults to <code>LANG = 'en'</code>. All inline hardcoded Russian strings throughout <code>main.py</code>, <code>tornamentmanager.py</code>, <code>usermanager.py</code>, and all 274 room/item/user files were translated to English.</p>
+      </div>
+
+      <div class="section-title">Syntax Verified</div>
+
+      <div class="info-block">
+        <h3>Zero Syntax Errors Across All 274 Files</h3>
+        <p>Every <code>.py</code> file in the project was verified with <code>ast.parse()</code> after translation. Four apostrophe-in-single-quoted-string errors discovered during translation were fixed. Final check: <code>python3 -m py_compile</code> on all core modules passed clean.</p>
       </div>
     </div>
 
@@ -1101,6 +1157,13 @@
       <div class="section-title">Request Flow</div>
 
       <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-num">00</div>
+          <div class="flow-content">
+            <h4>Locale Strings</h4>
+            <p>All game text is loaded from <code>localizations/en.json</code> via <code>locale_manager.get(key)</code>. The config value <code>LANG = 'en'</code> routes to the English file. Buttons, death messages, shop text, and combat replies are all resolved at runtime from this single source — making the bot fully internationalizable without code changes.</p>
+          </div>
+        </div>
         <div class="flow-step">
           <div class="flow-num">01</div>
           <div class="flow-content">
@@ -1140,7 +1203,7 @@
           <div class="flow-num">06</div>
           <div class="flow-content">
             <h4>State Persisted</h4>
-            <p>After every operation, <code>usermanager.save_user(usr)</code> pickles the modified User back to disk. Global state (boss, leaderboard) is written to TinyDB via <code>databasemanager</code>.</p>
+            <p>After every operation, <code>usermanager.save_user(usr)</code> pickles the modified User back to disk. Global state (boss, leaderboard, tournaments, shared vars) is written to MongoDB via <code>databasemanager</code> using <code>pymongo</code> with upsert writes.</p>
           </div>
         </div>
       </div>
@@ -1151,7 +1214,7 @@
         <div class="arch-card">
           <h4>main.py</h4>
           <div class="arch-file">Entry point — Telegram</div>
-          <p>Registers all command handlers, starts two background jobs (divine intervention, tournament update), and manages the message queue to avoid 429 errors.</p>
+          <p>Rewritten for PTB v13 callback-style handlers (<code>(update, context)</code> signature). Replaced legacy <code>Job()</code>/<code>run_async</code> with <code>JobQueue.run_repeating()</code>. Manages message queue to avoid Telegram 429 errors.</p>
         </div>
         <div class="arch-card">
           <h4>usermanager.py</h4>
@@ -1212,7 +1275,7 @@ restart *     Confirming character deletion</div>
       <div class="page-header">
         <div class="page-eyebrow">Documentation · RogueBot</div>
         <h2 class="page-title">File Structure</h2>
-        <p class="page-subtitle">284 source files across the project. Hover any file or folder for a description of its role.</p>
+        <p class="page-subtitle">274 source files across the project. Hover any file or folder for a description of its role.</p>
       </div>
 
       <div class="tree-container">
@@ -2008,6 +2071,178 @@ calc_bonus(b, cnt) = b × (1 + log(cnt) / 0.79)   # stacking logarithm</div>
       </div>
     </div>
 
+    <!-- ══ PAGE: DEPLOYMENT ══ -->
+    <div class="page" id="page-deployment">
+      <div class="page-header">
+        <div class="page-eyebrow">Setup · RogueBot-EN</div>
+        <h2 class="page-title">Deployment</h2>
+        <p class="page-subtitle">Everything you need to run RogueBot-EN from scratch on a fresh Python 3.10+ environment.</p>
+      </div>
+
+      <div class="section-title">Prerequisites</div>
+      <div class="arch-grid">
+        <div class="arch-card">
+          <h4>Python 3.10+</h4>
+          <div class="arch-file">Minimum required</div>
+          <p>The bot uses Python 3.10+ syntax and type constructs. Tested on 3.10 and 3.11. The <code>importlib.machinery</code> changes and <code>logger.warning()</code> fixes ensure compatibility up to Python 3.12+.</p>
+        </div>
+        <div class="arch-card">
+          <h4>MongoDB</h4>
+          <div class="arch-file">mongod on localhost:27017</div>
+          <p>A running local MongoDB instance is required. The bot connects to the <code>rogbot</code> database automatically on first run. No schema setup needed — collections are created on first write. Install via <code>apt install mongodb</code> or brew.</p>
+        </div>
+        <div class="arch-card">
+          <h4>Telegram Bot Token</h4>
+          <div class="arch-file">@BotFather</div>
+          <p>Create a bot via @BotFather on Telegram to get your <code>TELEGRAM_TOKEN</code>. Set in <code>config.py</code> before running. Optionally set <code>ADMINS_IDS</code> and <code>MODERS_IDS</code> as lists of Telegram user ID strings.</p>
+        </div>
+        <div class="arch-card">
+          <h4>pip packages</h4>
+          <div class="arch-file">requirements.txt</div>
+          <p>All pinned to tested versions. Install with <code>pip install -r requirements.txt</code>. On system Python (Kali/Debian) add <code>--break-system-packages</code> flag. Main deps: <code>python-telegram-bot==13.15</code>, <code>pymongo==4.6.1</code>.</p>
+        </div>
+      </div>
+
+      <div class="section-title">Quick Start</div>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-num">01</div>
+          <div class="flow-content">
+            <h4>Install dependencies</h4>
+            <p><code>pip install -r requirements.txt</code> — installs all pinned packages. On Kali NetHunter: <code>pip install -r requirements.txt --break-system-packages</code></p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">02</div>
+          <div class="flow-content">
+            <h4>Start MongoDB</h4>
+            <p><code>mongod --dbpath ./data/db &amp;</code> — or use the system service: <code>sudo systemctl start mongod</code>. The database will be auto-created as <code>rogbot</code>.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">03</div>
+          <div class="flow-content">
+            <h4>Edit config.py</h4>
+            <p>Open <code>config.py</code> and set <code>TELEGRAM_TOKEN = 'your_token_here'</code>. Optionally add your Telegram user ID to <code>MODERS_IDS</code> and <code>ADMINS_IDS</code> for admin commands. Leave Twitter and Botan fields commented out if unused.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">04</div>
+          <div class="flow-content">
+            <h4>Create users directory</h4>
+            <p><code>mkdir -p users</code> — The bot does this automatically, but creating it manually avoids the first-run log message. Pickle user files will be saved here as <code>users/&lt;uid&gt;.usr</code>.</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">05</div>
+          <div class="flow-content">
+            <h4>Run the bot</h4>
+            <p><code>python main.py</code> — The bot starts polling. You should see <em>"Bot officially started!"</em> in the logs. Send <code>/start</code> to your bot on Telegram to begin playing.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">config.py Reference</div>
+      <div class="code-block">TELEGRAM_TOKEN = 'YOUR_BOT_TOKEN'     # Required — from @BotFather
+DATABASE_PATH  = 'db.json'           # Legacy — ignored in EN build (MongoDB used)
+USERS_PATH     = 'users'             # Directory for .usr pickle files
+LANG           = 'en'                # Locale: 'en' → localizations/en.json
+MODERS_IDS     = []                  # List of str Telegram IDs with mod commands
+ADMINS_IDS     = []                  # List of str Telegram IDs with admin commands
+
+# Optional — Botan.io analytics
+# BOTANIO_TOKEN = 'your_botan_token'
+
+# Optional — Twitter integration for Twi monster
+# CONSUMER_KEY        = ''
+# CONSUMER_SECRET     = ''
+# ACCESS_TOKEN        = ''
+# ACCESS_TOKEN_SECRET = ''</div>
+
+      <div class="section-title">Directory Layout After First Run</div>
+      <div class="code-block">RogueBot-EN/
+├── main.py                  ← Entry point
+├── config.py                ← Your settings here
+├── requirements.txt
+├── users/                   ← Auto-created; one .usr file per player
+│   ├── 123456789.usr
+│   └── ...
+├── localizations/
+│   ├── en.json              ← All game strings (English)
+│   └── locale_manager.py
+├── databasemanager/         ← MongoDB wrapper
+├── user/                    ← User class (14 definition files)
+├── rooms/                   ← 60+ room encounter modules
+│   ├── default/             ← Main dungeon (easy/medium/hard/expert)
+│   └── vietnam/             ← Vietnam zone
+├── items/                   ← 70+ item modules
+└── utils/                   ← Buffs, costumes, potions, names</div>
+
+      <div class="section-title">Notes for Kali NetHunter / Android Linux</div>
+      <div class="info-block">
+        <h3>Terminal-First Environment</h3>
+        <p>The bot is fully terminal-compatible — no GUI required. MongoDB can be run via <code>mongod</code> in the background. Use <code>tmux</code> or <code>screen</code> to keep the bot session alive. If MongoDB is unavailable, install via <code>apt install -y mongodb</code> or use a remote MongoDB Atlas URI by patching the <code>MongoClient()</code> call in <code>databasemanager/__init__.py</code>.</p>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: CHANGELOG ══ -->
+    <div class="page" id="page-changelog">
+      <div class="page-header">
+        <div class="page-eyebrow">Setup · RogueBot-EN</div>
+        <h2 class="page-title">Changelog</h2>
+        <p class="page-subtitle">Full audit of every change made to produce RogueBot-EN from the original 10-year-old Russian codebase.</p>
+      </div>
+
+      <div class="section-title">Breaking Changes Fixed</div>
+      <table class="monster-table">
+        <thead><tr><th>File</th><th>Issue</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr><td class="mon-name">main.py</td><td>PTB v12→v13: <code>(bot, update)</code> handler signature</td><td>All handlers → <code>(update, context)</code></td></tr>
+          <tr><td class="mon-name">main.py</td><td>Deprecated <code>@run_async</code> decorator</td><td>Removed entirely</td></tr>
+          <tr><td class="mon-name">main.py</td><td>Legacy <code>Job(fn, interval)</code> + <code>.put()</code></td><td>→ <code>jq.run_repeating(fn, interval)</code></td></tr>
+          <tr><td class="mon-name">main.py</td><td>Old <code>MessageHandler(False, msg)</code></td><td>→ <code>Filters.text &amp; ~Filters.command</code></td></tr>
+          <tr><td class="mon-name">itemloader.py</td><td><code>imp.load_source()</code> — removed in Python 3.12</td><td>→ <code>importlib.machinery.SourceFileLoader</code></td></tr>
+          <tr><td class="mon-name">roomloader.py</td><td><code>imp.load_module()</code> + SourceFileLoader deprecation</td><td>→ <code>spec_from_file_location</code> + <code>exec_module</code></td></tr>
+          <tr><td class="mon-name">databasemanager/</td><td><code>mongothon3</code> uninstallable dead package</td><td>Rewritten with plain <code>pymongo</code></td></tr>
+          <tr><td class="mon-name">leaderboard_model.py</td><td>Deprecated <code>collection.group()</code></td><td>→ <code>aggregate()</code> pipeline</td></tr>
+          <tr><td class="mon-name">__init__.py (db)</td><td><code>add_to_list(name, val)</code> — wrong variable name</td><td>Fixed: <code>val</code> → <code>value</code></td></tr>
+          <tr><td class="mon-name">All .py files</td><td><code>logger.warn()</code> removed in Python 3.12</td><td>→ <code>logger.warning()</code></td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-title">Dependency Changes</div>
+      <table class="monster-table">
+        <thead><tr><th>Package</th><th>Old</th><th>New</th><th>Reason</th></tr></thead>
+        <tbody>
+          <tr><td class="mon-name">python-telegram-bot</td><td>unpinned</td><td>13.15</td><td>Latest stable v13 with context callbacks</td></tr>
+          <tr><td class="mon-name">pymongo</td><td>via mongothon3</td><td>4.6.1</td><td>Direct modern driver; mongothon removed</td></tr>
+          <tr><td class="mon-name">tinydb</td><td>unpinned</td><td>4.8.0</td><td>Kept as optional; pinned for compat</td></tr>
+          <tr><td class="mon-name">requests</td><td>unpinned</td><td>2.31.0</td><td>Pinned for security</td></tr>
+          <tr><td class="mon-name">tweepy</td><td>unpinned</td><td>4.14.0</td><td>Modern Twitter v2 API support</td></tr>
+          <tr><td class="mon-name">mongothon3</td><td>required</td><td>REMOVED</td><td>Dead package, import error on install</td></tr>
+          <tr><td class="mon-name">vk_api</td><td>required</td><td>REMOVED</td><td>VK integration not in EN build</td></tr>
+          <tr><td class="mon-name">codecov</td><td>required</td><td>REMOVED</td><td>CI tool, not a runtime dependency</td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-title">Files Added</div>
+      <table class="monster-table">
+        <thead><tr><th>File</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td class="mon-name">config.py</td><td>Configuration template with all keys documented</td></tr>
+          <tr><td class="mon-name">localizations/en.json</td><td>Full English locale — 80+ game string keys</td></tr>
+          <tr><td class="mon-name">README_EN.md</td><td>English deployment README with setup steps</td></tr>
+          <tr><td class="mon-name">tests.py</td><td>Basic smoke tests for database variable and list operations</td></tr>
+        </tbody>
+      </table>
+
+      <div class="section-title">All Translated Modules</div>
+      <div class="info-block">
+        <h3>274 Files — Inline Strings, Comments, Button Labels</h3>
+        <p>Every Python file had Russian inline strings, button labels, story text, NPC dialogue, monster taunts, and code comments translated to English. This includes all 41 usual rooms, 14 special rooms, 28 monster rooms, 6 boss rooms, all mission rooms, 70+ item files, all 14 user definition files, all 3 databasemanager models, all utility files, and the main entry point. The localization JSON captures the 80+ shared UI strings; the remaining room-specific narrative is embedded directly in each module.</p>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -2152,14 +2387,14 @@ const COMMANDS = {
 };
 
 const FILE_TREE = [
-  { type: 'folder', name: 'RogueBot-master/', depth: 0, desc: 'Project root', children: 284 },
+  { type: 'folder', name: 'RogueBot-EN/', depth: 0, desc: 'Project root (translated + modernized English build)', children: 274 },
   { type: 'file', name: 'main.py', depth: 1, desc: 'Telegram bot entry point. Registers all command handlers, starts background jobs (divine_intervention every 3h, tournament update every 10s), and manages message queue.' },
   { type: 'file', name: 'main_vk.py', depth: 1, desc: 'VKontakte platform entry point. Same game engine, different transport.' },
   { type: 'file', name: 'main_alice.py', depth: 1, desc: 'Yandex Alice voice assistant integration entry point.' },
   { type: 'file', name: 'config.py', depth: 1, desc: 'Configuration via environment variables: TELEGRAM_TOKEN, VK_LOGIN/PASS, ADMINS_IDS, MODERS_IDS, DATABASE_PATH, USERS_PATH, LANG, BOTANIO_TOKEN, Twitter OAuth keys.' },
   { type: 'file', name: 'constants.py', depth: 1, desc: 'Game constants: god indices, dice bounds (DICE_MAX=32), aura names, sticker IDs, race types, and Twi_phrases for the special Twi monster.' },
   { type: 'file', name: 'usermanager.py', depth: 1, desc: 'CRUD layer for User pickle files. Provides get_user(), save_user(), new_user(), delete(), random_user(), and wrapper helpers for main.py.' },
-  { type: 'file', name: 'bossmanager.py', depth: 1, desc: 'Global world boss state. Creates, migrates, kills, and respawns bosses (6 types). Boss respawns after 3600 seconds. Stored in TinyDB.' },
+  { type: 'file', name: 'bossmanager.py', depth: 1, desc: 'Global world boss state. Creates, migrates, kills, and respawns bosses (6 types). Boss respawns after 3600 seconds. State stored in MongoDB via databasemanager.' },
   { type: 'file', name: 'tornamentmanager.py', depth: 1, desc: 'PvP tournament engine. Queue-based sign-ups; auto-starts at 10 players. Round-robin damage exchange every 10s. Winner gets 10-20k gold.' },
   { type: 'file', name: 'twimanager.py', depth: 1, desc: 'Twitter integration layer for Twi monster. Posts results when the special Twi enemy is killed or kills the player.' },
   { type: 'file', name: 'botan.py', depth: 1, desc: 'Botan.io analytics SDK wrapper. Used by statistics.py for event tracking and /rate referral links.' },
@@ -2185,11 +2420,11 @@ const FILE_TREE = [
   { type: 'file', name: 'money_defenition.py', depth: 2, desc: 'paid(), steal(), give_gold(). Gold transaction helpers.' },
   { type: 'file', name: 'save_defenition.py', depth: 2, desc: 'save(), recover(). Checkpoint save/load mechanics for the Save Scroll item.' },
 
-  { type: 'folder', name: 'databasemanager/', depth: 1, desc: 'TinyDB wrapper modules', children: 4 },
-  { type: 'file', name: '__init__.py', depth: 2, desc: 'Main DB interface: get_variable(), set_variable(), get_list(), add_to_list(), clear_list(), remove_from_list(), get_leaderboard().' },
-  { type: 'file', name: 'leaderboard_model.py', depth: 2, desc: 'Leaderboard TinyDB table model. Stores UID, name, score, death_reason. Supports ROOMS_TABLE and death table.' },
-  { type: 'file', name: 'lists_model.py', depth: 2, desc: 'List storage model for tournament queues and player lists.' },
-  { type: 'file', name: 'variable_model.py', depth: 2, desc: 'Key-value variable storage model. Used by bossmanager and various rooms.' },
+  { type: 'folder', name: 'databasemanager/', depth: 1, desc: 'MongoDB (pymongo) wrapper modules. Replaced TinyDB + mongothon. Plain pymongo classes with upsert writes and aggregation pipelines.', children: 4 },
+  { type: 'file', name: '__init__.py', depth: 2, desc: 'Main DB interface: get_variable(), set_variable(), get_list(), add_to_list(), clear_list(), remove_from_list(), get_leaderboard(). Also fixed add_to_list() bug (was passing val instead of value).' },
+  { type: 'file', name: 'leaderboard_model.py', depth: 2, desc: 'Leaderboard pymongo model. Uses scores collection. Stores UID, name, score, death_reason, leaderboard. Death aggregation uses $group + $sort pipeline instead of deprecated .group().' },
+  { type: 'file', name: 'lists_model.py', depth: 2, desc: 'List storage model for tournament queues and player lists. Uses lists collection with update_one(upsert=True).' },
+  { type: 'file', name: 'variable_model.py', depth: 2, desc: 'Key-value variable storage model. Uses variables collection with find_one/update_one(upsert=True). Used by bossmanager and various rooms.' },
 
   { type: 'folder', name: 'items/', depth: 1, desc: '70+ item modules across 5 categories', children: 72 },
   { type: 'folder', name: 'good/', depth: 2, desc: '24 beneficial items sold in shop or found as loot. Healing potions, scrolls, weapons, armor.', children: 24 },
@@ -2197,7 +2432,7 @@ const FILE_TREE = [
   { type: 'folder', name: 'loot/', depth: 2, desc: '25 loot items found in rooms. Weapons, armor, trinkets. Not sold in the main shop.', children: 25 },
   { type: 'folder', name: 'neutral/', depth: 2, desc: '14 neutral items with mixed or conditional effects.', children: 14 },
   { type: 'folder', name: 'pets/', depth: 2, desc: '6 pet companions: Bear, Dog, Fox, Duck, Frog, Homeless.', children: 6 },
-  { type: 'file', name: 'itemloader.py', depth: 2, desc: 'Dynamic item module importer. Builds shop pool (4 random items). Provides load_item(buff, code_name) and load_shop_items().' },
+  { type: 'file', name: 'itemloader.py', depth: 2, desc: 'Dynamic item module importer. Replaced deprecated imp module with importlib (spec_from_file_location). Builds shop pool (4 random items). Provides load_item(buff, code_name) and load_shop_items().' },
 
   { type: 'folder', name: 'rooms/', depth: 1, desc: '60+ room encounter modules across 2 zones', children: 130 },
   { type: 'folder', name: 'default/', depth: 2, desc: 'Main dungeon zone', children: 100 },
@@ -2207,11 +2442,11 @@ const FILE_TREE = [
   { type: 'folder', name: 'vietnam/', depth: 2, desc: 'Vietnam War themed alternate zone', children: 30 },
   { type: 'folder', name: 'missions/', depth: 3, desc: 'Scripted multi-part missions: main (3 parts), caravan (3 parts), leprechaun, tips tutorial', children: 12 },
   { type: 'folder', name: 'monster/', depth: 3, desc: 'Vietnam-specific enemies: Bush Soldier (280HP), Hippie (200HP), Vietnamese Army (1500HP)', children: 3 },
-  { type: 'file', name: 'roomloader.py', depth: 2, desc: 'Dynamic room importer. Resolves (zone, type, name) → Python module. Supports level-weighted random selection and room listing for floor previews.' },
+  { type: 'file', name: 'roomloader.py', depth: 2, desc: 'Dynamic room importer. Replaced deprecated imp.load_module() with importlib machinery (spec_from_file_location). Resolves (zone, type, name) → Python module. English boss action texts (Leave, Rooaaarrr, etc.).' },
 
   { type: 'folder', name: 'localizations/', depth: 1, desc: 'Localization files', children: 2 },
-  { type: 'file', name: 'ru.json', depth: 2, desc: 'All game strings in English (despite filename). 80+ keys covering UI text, combat messages, god dialogues, shop messages, inventory labels, death messages.' },
-  { type: 'file', name: 'locale_manager.py', depth: 2, desc: 'locale_manager.get(key) wrapper. Loads JSON by LANG config. Fallback to key name if missing.' },
+  { type: 'file', name: 'en.json', depth: 2, desc: 'All game strings in English. 80+ keys covering UI text, combat messages, god dialogues, shop messages, inventory labels, death messages. Previously ru.json, renamed in the EN build.' },
+  { type: 'file', name: 'locale_manager.py', depth: 2, desc: 'locale_manager.get(key) wrapper. Loads JSON by LANG config (en.json in EN build). Updated logger.warn() → logger.warning(). Fallback to key name if missing.' },
 
   { type: 'folder', name: 'utils/', depth: 1, desc: 'Utility helpers', children: 4 },
   { type: 'file', name: 'buffs.py', depth: 2, desc: 'Buff class definitions: EmperorBurn (ongoing fire damage), EmperorDefence (iron halo), gold buff, and base Buff class with damage_plus, defence, gold_bonus, mana_damage fields.' },
@@ -2382,9 +2617,9 @@ lucide.createIcons();
 (function() {
   const termMap = {
     cyan:   ['python-telegram-bot','CommandHandler','MessageHandler','usermanager','pickle',
-             'TinyDB','start_polling','roomloader','itemloader','databasemanager',
-             'get_user','save_user','main.py','main_vk.py','main_alice.py',
-             'db.json','bossmanager','tornamentmanager','locale_manager'],
+             'pymongo','start_polling','roomloader','itemloader','databasemanager',
+             'get_user','save_user','main.py','importlib','spec_from_file_location',
+             'run_repeating','bossmanager','tornamentmanager','locale_manager','en.json'],
     violet: ['User','corridor','inventory','shop','state machine','definition','mixin',
              'usermanager.py','user/','utils/','costumes','names.py','potions.py'],
     rose:   ['death','boss','damage','leaderboard','respawn','ADMINS_IDS','MODERS_IDS',
@@ -2392,7 +2627,7 @@ lucide.createIcons();
     amber:  ['gold','coin','reward','buy','sell','price','DICE_MAX','SMART_LEVEL',
              'DUMMY_LEVEL','tournament','Coliseum','10-20k','4 random'],
     green:  ['save','recover','heal','buff','pet','blessing','divine','god',
-             'good/','loot/','neutral/','pets/','Pickle','JSON','VKontakte'],
+             'good/','loot/','neutral/','pets/','Pickle','MongoDB','upsert','aggregate'],
   };
   const colorClass = { cyan:'kterm', violet:'kterm-violet', rose:'kterm-rose', amber:'kterm-amber', green:'kterm-green' };
   const allTerms = [];
